@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 def extract_XY(infilename):
 	'''
@@ -35,3 +36,31 @@ def extract_XY(infilename):
 		Y.append(labels)
 
 	return X, Y
+
+def extract_parents(Y, infilename):
+	''' Extract the immediate parents_index of each leaf node.
+		Builds an index of child->parents_index
+		`parents_index` is a dict of sets
+	'''
+	parents_index = {(int(label), set()) for labels in Y for label in labels}
+	with open(infilename, 'rb') as f:
+		for line in f:
+			# guaranteed ea. line has 2 tokens
+			parent, child = [int(x) for x in line.split()]
+			parents_index[child].add(parent)
+	return parents_index
+
+def inverse_index(parents_index):
+	''' Build an inverse index of parent->children.
+		Focus our attention only on immediate parents_index of leaf nodes.
+		No grandparents_index (of leaf nodes) allowed. '''
+	children_index = defaultdict(set)
+	for child, p_set in parents_index.iteritems():
+		for p in p_set:
+			children_index[p].add(child)
+	return children_index
+
+
+
+
+
