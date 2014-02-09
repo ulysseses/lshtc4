@@ -33,13 +33,14 @@ def cossim(t_d, k, t_corpus, counter, labels, parents_index, children_index):
 	example is extremely sparse such that the built-in dictionary is faster than
 	scipy.sparse matrices. Also reduces dimension to k-NN.
 
-	Make sure that `t_corpus` is the already-transformed `corpus`.
-
-	`top_k_cat_scores` is a dict key-grouped by category
+	Returns a pair: `scores`, `pscores`.
 
 	NOTE:
 
 		c <-> l <-> label <-> child <-> cat <-> category
+		Make sure that `t_corpus` is the already-transformed `corpus`.
+		`scores` is a dict key-grouped by category
+		`pscores` is a dict key-grouped by category
 
 	'''
 	doc_scores, cat_scores_dict = [], defaultdict(list)
@@ -62,19 +63,15 @@ def cossim(t_d, k, t_corpus, counter, labels, parents_index, children_index):
 			doc_scores.append((l, score))
 			cat_scores_dict[l].append(score)
 	# Return the k-NN (aka top-k similar examples)
-	top_k_docs = heapq.nlargest(k, doc_scores, operator.itemgetter(1))
-	# scores & pscores
+	top_k_tups = heapq.nlargest(k, doc_scores, operator.itemgetter(1))
+	# optimized/transformed scores & pscores
 	scores, pscores = defaultdict(list), defaultdict(list)
-	for l, score in top_k_docs:
-		scores[l].append(score)
-		parent = parents_index[l]
-		children = children_index[parent]
-		for child in children:
-			pscores[l].extend(cat_scores_dict[child])
+	for l, score in top_k_tups:
+		scores[l].append(np.log(1 + score))
+		pscores[l] = [np.log(len(children_index[parent]))
+			for parent in parents_index[l]]
 
 	return scores, pscores
-
-
 
 
 
