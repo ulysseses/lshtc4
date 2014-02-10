@@ -1,4 +1,11 @@
 from collections import defaultdict
+from itertools import islice
+
+def subset(iname, oname, offset, lines):
+	i, o = open(iname, 'rb'), open(oname, 'wb')
+	with i,o:
+		for l in islice(i, offset, offset+lines):
+			o.write(l)
 
 def extract_XY(infilename):
 	'''
@@ -32,22 +39,36 @@ def extract_XY(infilename):
 			for kv_str in kvs:
 				k,v = kv_str.split(':')
 				doc[int(k)] = int(v)
-		X.append(doc)
-		Y.append(labels)
+			X.append(doc)
+			Y.append(labels)
 
 	return X, Y
+
+def extract_Y(infilename):
+	Y = []
+	with open(infilename, 'rb') as f:
+		for line in f:
+			line_comma_split = line.split(',')
+			labels = line_comma_split[:-1]
+			pre_kvs = line_comma_split[-1].split()
+			labels.append(pre_kvs[0])
+			labels = [int(label) for label in labels]
+			Y.append(labels)
+	return Y
+
 
 def extract_parents(Y, infilename):
 	''' Extract the immediate parents_index of each leaf node.
 		Builds an index of child->parents_index
 		`parents_index` is a dict of sets
 	'''
-	parents_index = {(int(label), set()) for labels in Y for label in labels}
+	parents_index = {int(label):set([]) for labels in Y for label in labels}
 	with open(infilename, 'rb') as f:
 		for line in f:
 			# guaranteed ea. line has 2 tokens
 			parent, child = [int(x) for x in line.split()]
-			parents_index[child].add(parent)
+			if child in parents_index:
+				parents_index[child].add(parent)
 	return parents_index
 
 def inverse_index(parents_index):
