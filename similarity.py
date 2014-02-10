@@ -4,6 +4,7 @@ from collections import defaultdict
 import heapq
 import operator
 import numpy as np
+from numpy.linalg import norm
 
 def transform_tfidf(corpus, bin_word_counter):
 	''' Transform corpus into modified tf-idf representation.
@@ -47,19 +48,18 @@ def cossim(d_i, t_X, k, t_Y, parents_index, children_index):
 
 	'''
 	doc_scores, cat_scores_dict = [], defaultdict(list)
-	for i,(doc, labels) in enumerate(izip(t_X, t_Y)):
+	for doc, labels in izip(t_X, t_Y):
 		# Calculate numerator efficiently
 		if len(doc) <= len(d_i):
 			first, second = doc, d_i
 		else:
 			first, second = d_i, doc
 		top = 0
-		for k in first:
-			if k in second:
-				top += first[k]*second[k]
+		for word in first:
+			if word in second:
+				top += first[word]*second[word]
 		# Calculate denominator efficiently
-		bottom = (sum([v**2 for v in d_i.itervalues()]) *\
-			sum([v**2 for v in doc.itervalues()]))**0.5
+		bottom = norm(d_i.values())*norm(doc.values())
 
 		score = top / bottom
 		for label in labels:
@@ -70,8 +70,11 @@ def cossim(d_i, t_X, k, t_Y, parents_index, children_index):
 	# optimized/transformed scores & pscores
 	scores, pscores = defaultdict(list), defaultdict(list)
 	for label, score in top_k_tups:
-		scores[label].append(np.log(1 + score))
-		pscores[label] = [np.log(len(children_index[parent]))
+		#scores[label].append(np.log(1 + score))
+		scores[label].append(score)
+		# pscores[label] = [np.log(len(children_index[parent]))
+		# 	for parent in parents_index[label]]
+		pscores[label] = [len(children_index[parent])
 			for parent in parents_index[label]]
 
 	return scores, pscores
@@ -80,10 +83,14 @@ def optimized_ranks(scores, pscores, label_counter, w1, w2, w3, w4):
 	''' w1..w4 are weights corresponding to x1..x4 '''
 	ranks_dict = {}
 	for c in scores:
-		x1 = np.log(max(scores[c]))
-		x2 = np.log(sum(pscores[c]))
-		x3 = np.log(sum(scores[c]))
-		x4 = np.log(len(scores[c])/len(label_counter[c]))
+		# x1 = np.log(max(scores[c]))
+		# x2 = np.log(sum(pscores[c]))
+		# x3 = np.log(sum(scores[c]))
+		# x4 = np.log(len(scores[c])/label_counter[c])
+		x1 = max(scores[c])
+		x2 = sum(pscores[c])
+		x3 = sum(scores[c])
+		x4 = len(scores[c])/label_counter[c]
 		ranks_dict[c] = w1*x1 + w2*x2 + w3*x3 + w4*x4
 	return ranks_dict
 

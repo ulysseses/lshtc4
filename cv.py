@@ -21,6 +21,7 @@ A K-fold CV function is also provided, if desired...
 
 import numpy as np
 from itertools import izip, islice
+from collections import defaultdict
 
 
 def even_sample_CV(iname=None, otemp=None, out_of_core=False, X=None, Y=None):
