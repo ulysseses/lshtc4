@@ -3,22 +3,19 @@ import numpy as np
 import cPickle
 from itertools import izip
 
-import preproc
-import pruning
-import similarity
-import cv
-import evaluation
-from pylib import preproc, pruning, cv, evaluation#, similarity
+import sys
+sys.path.insert(0, '..')
+from pylib import preproc, pruning, cv, evaluation
 
 import pyximport; pyximport().install()
 from clib import similarity
 
 
 # Test on toyset.
-preproc.subset("raw_data/train.csv", "data/train.csv", 1, 200000)
+preproc.subset("../raw_data/train.csv", "../data/train.csv", 1, 200000)
 
 # Load toyset .csv -> X & Y
-X, Y = preproc.extract_XY("data/train.csv")
+X, Y = preproc.extract_XY("../data/train.csv")
 
 # Prune corpora
 label_counter = pruning.LabelCounter(Y)
@@ -48,7 +45,7 @@ del bin_word_counter # free up memory
 # 	Y = cPickle.load(picklefile)
 
 # Load hierarchy (parents & children indices)
-parents_index = preproc.extract_parents(Y, "raw_data/hierarchy.txt")
+parents_index = preproc.extract_parents(Y, "../raw_data/hierarchy.txt")
 children_index = preproc.inverse_index(parents_index)
 # with open("working/parents_index.dat", 'wb') as picklefile:
 # 	cPickle.dump(parents_index, picklefile, -1)
