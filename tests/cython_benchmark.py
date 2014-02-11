@@ -7,7 +7,9 @@ import sys
 sys.path.insert(0, '..')
 from pylib import preproc, pruning, cv, evaluation
 
-import pyximport; pyximport.install()
+import pyximport
+pyximport.install(setup_args={"include_dirs":np.get_include()},
+                  reload_support=True)
 from clib import similarity
 
 
