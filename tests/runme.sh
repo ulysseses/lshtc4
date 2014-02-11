@@ -5,5 +5,5 @@
 
 for (( i=$2; i<=$3; i++ ))
 do
-	python "$1.py" $i
+	time python "$1.py" $i
 done
