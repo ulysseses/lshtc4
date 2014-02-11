@@ -34,8 +34,8 @@ class CategoryPNCounter(defaultdict):
             tp = ddict.__getitem__('tp')
             fp = ddict.__getitem__('fp')
             fn = ddict.__getitem__('fn')
-            p = tp / (tp + fp)
-            r = tp / (tp + fn)
+            p = tp / (tp + fp) if tp+fp != 0 else 0
+            r = tp / (tp + fn) if tp+fn != 0 else 0
             self.__getitem__(cat)['p'] = p
             self.__getitem__(cat)['r'] = r
 

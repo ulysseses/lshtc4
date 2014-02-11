@@ -7,14 +7,14 @@ import numpy
 import numpy as np
 
 cimport cython
-cimport numpy
-cimport numpy as np
+#cimport numpy
+#cimport numpy as np
 #from cmath cimport log
-#from libc.math cimport log
+from libc.math cimport log as clog
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def transform_tfidf(list corpus, dict bin_word_counter):
+def transform_tfidf(list corpus, bin_word_counter):
     ''' Transform corpus into modified tf-idf representation.
         t_X = transform_corpus(corpus, bin_word_counter)
 
@@ -25,7 +25,7 @@ def transform_tfidf(list corpus, dict bin_word_counter):
     n = len(corpus)
     for doc in corpus:
         for w in doc:
-            doc[w] = np.log(doc[w] + 1) * np.log(n / bin_word_counter[w])
+            doc[w] = clog(doc[w] + 1) * clog(n / bin_word_counter[w])
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -34,11 +34,12 @@ cdef float norm(list values):
     ansatz = 0
     for v in values:
         ansatz += v*v
-    return np.log(ansatz**0.5)
+    return clog(ansatz**0.5)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def cossim(d_i, t_X, k, t_Y, parents_index, children_index):
+def cossim(dict d_i, list t_X, int k, t_Y, dict parents_index,
+        children_index): # defaultdict, dict, bad OOP, I know :(
     '''
     def w(t,d, corpus, counter):
 
@@ -84,9 +85,11 @@ def cossim(d_i, t_X, k, t_Y, parents_index, children_index):
             if word in second:
                 top += first[word]*second[word]
         # Calculate denominator efficiently
-        bottom = norm(d_i.itervalues())*norm(doc.itervalues())
-
-        score = top / bottom
+        if top != 0:
+            bottom = norm(d_i.values())*norm(doc.values())
+            score = top / bottom
+        else:
+            score = 0
         for label in labels:
             doc_scores.append((label, score))
             cat_scores_dict[label].append(score)
@@ -106,7 +109,8 @@ def cossim(d_i, t_X, k, t_Y, parents_index, children_index):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def optimized_ranks(dict scores, dict pscores, dict label_counter, double w1, double w2, double w3, double w4):
+def optimized_ranks(scores, pscores, label_counter,
+        double w1, double w2, double w3, double w4):
     ''' w1..w4 are weights corresponding to x1..x4 '''
     cdef int c
     cdef double x1, x2, x3, x4

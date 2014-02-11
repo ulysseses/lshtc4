@@ -1,9 +1,13 @@
 #!/bin/bash
 
-# $LSHTC4_DIR/tests/ # ./runme.sh py_benchmark 0 5
-# $LSHTC4_DIR/tests/ # ./runme.sh cython_benchmark 0 5
+# $LSHTC4_DIR/tests/ $ ./runme.sh py_benchmark.py 0 5
+# $LSHTC4_DIR/tests/ $ ./runme.sh cython_benchmark.py 0 5
 
 for (( i=$2; i<=$3; i++ ))
 do
-	time python "$1.py" $i
+	if [ $i -eq $2 ]
+	then
+		python $1 $i | tee "$1.log"
+	fi
+	python $1 $i | tee -a "$1.log"
 done
