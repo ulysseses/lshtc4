@@ -2,3 +2,4 @@ data/
 raw_data/
 working/
 *.pyc
+notebooks/.ipynb_checkpoints/

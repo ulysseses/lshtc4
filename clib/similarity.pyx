@@ -9,7 +9,6 @@ import numpy as np
 cimport cython
 #cimport numpy
 #cimport numpy as np
-#from cmath cimport log
 from libc.math cimport log as clog
 
 @cython.boundscheck(False)
