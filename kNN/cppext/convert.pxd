@@ -1,7 +1,4 @@
 #distutils: language = c++
-# from libcpp.vector cimport vector
-# from unordered_map cimport unordered_map
-# from unordered_set cimport unordered_set
 from libcpp.vector cimport vector
 from kNN.cppext.container cimport unordered_map, unordered_set
 

@@ -2,6 +2,7 @@
 
 # $LSHTC4_DIR/tests/ $ ./runme.sh py_benchmark.py 0 5
 # $LSHTC4_DIR/tests/ $ ./runme.sh cython_benchmark.py 0 5
+# $LSHTC4_DIR/tests/ $ ./runme.sh main_cython.py 0 5
 
 for (( i=$2; i<=$3; i++ ))
 do

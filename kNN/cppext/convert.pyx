@@ -3,11 +3,6 @@
 #cython: wraparound=False
 ''' Convert Pythonic containers to Cythonic containers. '''
 
-# from unordered_map cimport unordered_map
-# from unordered_set cimport unordered_set
-# from libcpp.vector cimport vector
-# from cython.operator cimport dereference as deref, preincrement as inc
-# from libcpp.utility cimport pair
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from cython.operator cimport dereference as deref, preincrement as inc

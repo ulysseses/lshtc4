@@ -1,18 +1,15 @@
 #distutils: language = c++
 #cython: boundscheck=False
 #cython: wraparound=False
-# import sys
-# import cPickle
-# sys.path.insert(0, '..')
-# from pylib import preproc, pruning, cv, evaluation, benchmark
-# from pylib import similarity as py_sim
+'''
+Using Python interpretor within root directory:
+	
+	from kNN.cppext.tests import cython_benchmark as cb
+	cb.stage0(raw="...", out="...")
+	cb.stage1(...)
 
-# from clib cimport similarity, convert
-# from clib.unordered_map cimport unordered_map
-# from clib.unordered_set cimport unordered_set
-# from libcpp.vector cimport vector
-# from cython.operator cimport dereference as deref, preincrement as inc
-# from libcpp.utility cimport pair
+'''
+
 import cPickle
 from kNN.pyext import preproc, pruning, cv, evaluation, benchmark
 from kNN.pyext import similarity as py_sim
