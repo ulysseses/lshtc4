@@ -1,23 +1,21 @@
 #distutils: language = c++
 #cython: boundscheck=False
 #cython: wraparound=False
+# from __future__ import division
+# cimport cython
+# from libc.math cimport log
+# from unordered_map cimport unordered_map
+# from unordered_set cimport unordered_set
+# from libcpp.vector cimport vector
+# from cython.operator cimport dereference as deref, preincrement as inc
+# from libcpp.utility cimport pair
 from __future__ import division
-# from itertools import izip
-# from collections import defaultdict
-# import heapq
-# import operator
-# import numpy
-# import numpy as np
-
 cimport cython
-#cimport numpy
-#cimport numpy as np
 from libc.math cimport log
-from unordered_map cimport unordered_map
-from unordered_set cimport unordered_set
 from libcpp.vector cimport vector
-from cython.operator cimport dereference as deref, preincrement as inc
 from libcpp.utility cimport pair
+from cython.operator cimport dereference as deref, preincrement as inc
+from kNN.cppext.container cimport unordered_map, unordered_set
 
 ctypedef unordered_map[int, int] iidict
 ctypedef unordered_map[int, unordered_set[int]] isdict

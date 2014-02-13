@@ -1,30 +1,42 @@
 #distutils: language = c++
 #cython: boundscheck=False
 #cython: wraparound=False
-import sys
-sys.path.insert(0, '..')
-from pylib import preproc, pruning, cv, evaluation, benchmark
-from clib import similarity, convert
-from clib.unordered_map cimport unordered_map
-from clib.unordered_set cimport unordered_set
+# import sys
+# import cPickle
+# sys.path.insert(0, '..')
+# from pylib import preproc, pruning, cv, evaluation, benchmark
+# from pylib import similarity as py_sim
+
+# from clib cimport similarity, convert
+# from clib.unordered_map cimport unordered_map
+# from clib.unordered_set cimport unordered_set
+# from libcpp.vector cimport vector
+# from cython.operator cimport dereference as deref, preincrement as inc
+# from libcpp.utility cimport pair
+import cPickle
+from kNN.pyext import preproc, pruning, cv, evaluation, benchmark
+from kNN.pyext import similarity as py_sim
+
 from libcpp.vector cimport vector
-from cython.operator cimport dereference as deref, preincrement as inc
 from libcpp.utility cimport pair
+from cython.operator cimport dereference as deref, preincrement as inc
+from kNN.cppext.container cimport unordered_map, unordered_set
+from kNN.cppext cimport similarity, convert
 
 @benchmark.print_time
-def stage0():
+def stage0(raw="../raw_data/train.csv", out="../data/train.csv", start=1, stop=200000):
 	# Test on toyset
-	preproc.subset("../raw_data/train.csv", "../data/train.csv", 1, 200000)
+	preproc.subset(raw, out, start, stop)
 
 @benchmark.print_time
-def stage1():
+def stage1(fh="../data/train.csv", nbl=2, nbw=2, nal=1.0, naw=0.4, mnl=None, mnw=None):
 	# Load toyset .csv -> X & Y
-	X, Y = preproc.extract_XY("../data/train.csv")
+	X, Y = preproc.extract_XY(fh)
 	# Prune corpora
 	label_counter = pruning.LabelCounter(Y)
 	word_counter = pruning.WordCounter(X)
-	label_counter.prune(no_below=2, no_above=1.0, max_n=None)
-	word_counter.prune(no_below=2, no_above=0.4, max_n=None) # assume balanced
+	label_counter.prune(no_below=nbl, no_above=nal, max_n=mnl)
+	word_counter.prune(no_below=nbw, no_above=naw, max_n=mnw) # assume balanced
 	pruning.prune_corpora(X, Y, label_counter, word_counter)
 	del word_counter # free up memory
 	##Save state
@@ -35,24 +47,24 @@ def stage1():
 
 @benchmark.print_time
 def stage2():
-	with open("../working/tX.dat", 'rb') as picklefile:
+	with open("../working/X.dat", 'rb') as picklefile:
 		X = cPickle.load(picklefile)
 
 	# Transform X to tf-idf
 	bin_word_counter = pruning.WordCounter(X, binary=True)
-	similarity.transform_tfidf(X, bin_word_counter)
+	py_sim.transform_tfidf(X, bin_word_counter)
 	del bin_word_counter
 	##Save state
 	with open("../working/tX.dat", 'wb') as picklefile:
 		cPickle.dump(X, picklefile, -1)
 
 @benchmark.print_time
-def stage3():
+def stage3(hierarchy_handle="../raw_data/hierarchy.txt"):
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
 
 	# Load hierarchy (parents & children indices)
-	parents_index = preproc.extract_parents(Y, "../raw_data/hierarchy.txt")
+	parents_index = preproc.extract_parents(Y, hierarchy_handle)
 	children_index = preproc.inverse_index(parents_index)
 	##Save state
 	with open("../working/parents_index.dat", 'wb') as picklefile:
@@ -62,6 +74,10 @@ def stage3():
 
 @benchmark.print_time
 def stage4():
+	''' At the moment, for this stage, you'll have to directly modify which 
+	cv function you'll want to use to split X/Y into their respective 
+	validation/training sub-sets. In the future, the user will be able to 
+	easily select which cv-strategy to invoke by passing args/kwargs. '''
 	with open("../working/tX.dat", 'rb') as picklefile:
 		X = cPickle.load(picklefile)
 	with open("../working/Y.dat", 'rb') as picklefile:
@@ -81,7 +97,8 @@ def stage4():
 		cPickle.dump(t_Y, picklefile, -1)
 
 @benchmark.print_time
-def loaded_main():
+def loaded_main(int n_iterations=20, int k=70, double w1=3.4, double w2=0.6,
+		double w3=0.8, double w4=0.2, double alpha=0.9):
 	##rebuild label_counter manually to avoid weird cPickle bug
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
@@ -121,11 +138,11 @@ def loaded_main():
 	@benchmark.print_time
 	def stage5():
 		# Obtain k-NN scores & pscores, predict, and calculate F1!
-		cdef int n_iterations = 20
-		cdef int k = 70
-		cdef double w1, w2, w3, w4
-		w1, w2, w3, w4 = 3.4, 0.6, 0.8, 0.2
-		cdef double alpha = 0.9
+		# cdef int n_iterations = 20
+		# cdef int k = 70
+		# cdef double w1, w2, w3, w4
+		# w1, w2, w3, w4 = 3.4, 0.6, 0.8, 0.2
+		# cdef double alpha = 0.9
 		cat_pns = evaluation.CategoryPNCounter()
 		cdef unordered_map[int, double] d_i
 		cdef vector[int] labels_i
@@ -138,15 +155,15 @@ def loaded_main():
 		cdef unordered_map[int, double] ranks
 		cdef vector[int] predicted_labels
 		for i in xrange(n_iterations):
-			d_i = deref(it).second
-			labels_i = deref(it2).second
+			d_i = deref(it)
+			labels_i = deref(it2)
 			inc(it)
 			inc(it2)
-			scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, parents_index,
-				children_index)
+			scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, c_parents_index,
+				c_children_index)
 			scores = scores_pair.first
 			pscores = scores_pair.second
-			ranks = similarity.predict(scores, pscores, label_counter,
+			ranks = similarity.optimized_ranks(scores, pscores, c_label_counter,
 				w1, w2, w3, w4)
 			predicted_labels = similarity.predict(ranks, alpha)
 			py_pred_labels = [predicted_labels[<int>x]
@@ -159,25 +176,3 @@ def loaded_main():
 		print "MaF:", MaF
 
 	stage5()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

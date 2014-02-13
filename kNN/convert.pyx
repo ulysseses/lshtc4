@@ -3,11 +3,15 @@
 #cython: wraparound=False
 ''' Convert Pythonic containers to Cythonic containers. '''
 
-from unordered_map cimport unordered_map
-from unordered_set cimport unordered_set
+# from unordered_map cimport unordered_map
+# from unordered_set cimport unordered_set
+# from libcpp.vector cimport vector
+# from cython.operator cimport dereference as deref, preincrement as inc
+# from libcpp.utility cimport pair
 from libcpp.vector cimport vector
-from cython.operator cimport dereference as deref, preincrement as inc
 from libcpp.utility cimport pair
+from cython.operator cimport dereference as deref, preincrement as inc
+from kNN.cppext.container cimport unordered_map, unordered_set
 
 cdef vector[unordered_map[int, double]] cythonize_X(object X):
     ''' Convert list(dict(int:double)) to vector[unordered_map[int,double]] '''

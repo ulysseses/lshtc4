@@ -1,5 +1,7 @@
 data/
 raw_data/
-working/
+working/*
 *.pyc
 notebooks/.ipynb_checkpoints/
+build/
+*.so
