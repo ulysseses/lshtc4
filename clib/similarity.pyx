@@ -74,7 +74,7 @@ cdef extern from "<algorithm>" namespace "std":
     void partial_sort(pairvectitr&, pairvectitr&, pairvectitr&, compare&) nogil except +
     void partial_sort(pairvectitr&, pairvectitr&, pairvectitr&) nogil except +
 
-cdef bint comp_func(idpair& x, idpair& y):
+cdef inline bint comp_func(idpair& x, idpair& y):
     ''' A comparison func. that returns 1/True or 0/False if x > y
         based on the value of the second element in the pair, respectively. '''
     return <bint> x.second > y.second
