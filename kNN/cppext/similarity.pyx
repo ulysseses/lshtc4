@@ -118,13 +118,15 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
     cdef vectmap cat_scores_dict
     cdef int t_X_size = <int>t_X.size()
     cdef int i, doc_size, d_i_size, j, label
+    cdef int overlap_count = 0
+    cdef double threshold = 0.3
+    cdef int smaller_size
     cdef iddict doc
     cdef vector[int] labels
     cdef double top, bottom, score
     cdef iddictitr it
     cdef idpair kv
     cdef iddictitr got
-    cdef vector[double]* v_ptr
     cdef pairvectitr it2
     cdef vectmap scores, pscores
     cdef vectmapitr got2
@@ -140,23 +142,28 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
         d_i_size = <int> d_i.size()
         top = 0
         if doc_size <= d_i_size:
+            smaller_size = doc_size
             it = doc.begin()
             while it != doc.end():
                 kv = deref(it)
                 inc(it)
                 got = d_i.find(kv.first)
                 if got != d_i.end():
+                    overlap_count += 1
                     top += kv.second * deref(got).second
         else:
+            smaller_size = d_i_size
             it = d_i.begin()
             while it != d_i.end():
                 kv = deref(it)
                 inc(it)
                 got = doc.find(kv.first)
                 if got != doc.end():
+                    overlap_count += 1
                     top += kv.second * deref(got).second
         # Calculate denominator efficiently (memoization)
-        if top != 0:
+        # Set a magic-number threshold to skip if top is small
+        if overlap_count > <int>(threshold * smaller_size):
             bottom = norm(d_i) * norm(doc)
             score = top / bottom
         else:
@@ -167,8 +174,7 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
             got2 = cat_scores_dict.find(label)
             if got2 == cat_scores_dict.end():
                 cat_scores_dict[label] = vector[double]()
-            v_ptr = &cat_scores_dict[label]
-            deref(v_ptr).push_back(score)
+            cat_scores_dict[label].push_back(score)
     # Return the k-NN (aka top-k similar examples)
     partial_sort(doc_scores.begin(), doc_scores.begin()+k, doc_scores.end(),
         comp_func)
@@ -182,8 +188,7 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
         got2 = scores.find(label)
         if got2 == scores.end():
             scores[label] = vector[double]()
-        v_ptr = &scores[label]
-        deref(v_ptr).push_back(score)
+        scores[label].push_back(score)
         parents_set = parents_index[label]
         it3 = parents_set.begin()
         while it3 != parents_set.end():
@@ -193,8 +198,7 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
             got2 = pscores.find(label)
             if got2 == pscores.end():
                 pscores[label] = vector[double]()
-            v_ptr = &pscores[label]
-            deref(v_ptr).push_back(<double>children_set.size())
+            pscores[label].push_back(<double>children_set.size())
     return pair[vectmap, vectmap](scores, pscores)
 
 ctypedef vector[double].iterator dvectitr

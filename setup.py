@@ -39,7 +39,7 @@ def makeExtension(extName):
         include_dirs = ["."],   # adding the '.' to include_dirs is CRUCIAL!!
                                         # also, include any .h/.hpp header files
         language='c++',                 # should I generate .cpp or .c source?
-        #extra_compile_args = [],
+        extra_compile_args = ["-O3"],
         #extra_link_args = [],
         #libraries = [],                # put any .o/.so files here
         )
