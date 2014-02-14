@@ -1,0 +1,9 @@
+stage0 call duration: 0.587085962296 sec
+stage0 call duration: 1.12239694595 sec
+stage1 call duration: 30.3195879459 sec
+stage2 call duration: 121.976635218 sec
+stage3 call duration: 3.59853410721 sec
+stage4 call duration: 65.1363179684 sec
+MaF: 0.0
+stage5 call duration: 20.6827259064 sec
+loaded_main call duration: 38.5886669159 sec
