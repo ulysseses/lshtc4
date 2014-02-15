@@ -26,17 +26,27 @@ def stage0(raw="../raw_data/train.csv", out="../data/train.csv", start=1, stop=2
 	preproc.subset(raw, out, start, stop)
 
 @benchmark.print_time
-def stage1(fh="../data/train.csv", nbl=2, nbw=2, nal=1.0, naw=0.4, mnl=None, mnw=None):
+def stage1(fh="../data/train.csv", nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw=None):
 	# Load toyset .csv -> X & Y
 	X, Y = preproc.extract_XY(fh)
 	# Prune corpora
 	label_counter = pruning.LabelCounter(Y)
 	word_counter = pruning.WordCounter(X)
 	label_counter.prune(no_below=nbl, no_above=nal, max_n=mnl)
-	word_counter.prune(no_below=nbw, no_above=naw, max_n=mnw) # assume balanced
+	word_counter.prune(no_below=nbw, max_n=mnw)
 	pruning.prune_corpora(X, Y, label_counter, word_counter)
-	del word_counter # free up memory
 	##Save state
+	with open("../working/label_counter.dat", 'wb') as picklefile:
+		cPickle.dump(label_counter, picklefile, -1)
+	with open("../working/word_counter.dat", 'wb') as picklefile:
+		cPickle.dump(word_counter, picklefile, -1)
+	# Prune corpora	
+	bin_word_counter = pruning.WordCounter(X, binary=True)
+	bin_word_counter.prune(no_above=naw, max_n=mnw)
+	pruning.prune_corpora(X, Y, label_counter, bin_word_counter)
+	##Save state
+	with open("../working/bin_word_counter.dat", 'wb') as picklefile:
+		cPickle.dump(bin_word_counter, picklefile, -1)
 	with open("../working/X.dat", 'wb') as picklefile:
 		cPickle.dump(X, picklefile, -1)
 	with open("../working/Y.dat", 'wb') as picklefile:
@@ -62,7 +72,7 @@ def stage3(hierarchy_handle="../raw_data/hierarchy.txt"):
 
 	# Load hierarchy (parents & children indices)
 	parents_index = preproc.extract_parents(Y, hierarchy_handle)
-	children_index = preproc.inverse_index(parents_index)
+	children_index = preproc.invert_index(parents_index)
 	##Save state
 	with open("../working/parents_index.dat", 'wb') as picklefile:
 		cPickle.dump(parents_index, picklefile, -1)

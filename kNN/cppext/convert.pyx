@@ -51,3 +51,15 @@ cdef unordered_map[int,int] cythonize_counter(object counter):
         ccounter[<int>token] = <int>count
     return ccounter
 
+cdef unordered_map[int, unordered_set[int]] cythonize_iidx(object iidx):
+    ''' Convert dict(int: set(int)) to unordered_map[int, set[int]] '''
+    cdef unordered_map[int, unordered_set[int]] ciidx
+    cdef int word, doc_num
+    cdef unordered_map[int, unordered_set[int]].iterator got
+    for word, doc_nums in iidx.iteritems():
+        for doc_num in doc_nums:
+            got = ciidx.find(word)
+            if got == ciidx.end():
+                ciidx[word] = unordered_set[int]()
+            ciidx[word].insert(doc_num)
+    return ciidx

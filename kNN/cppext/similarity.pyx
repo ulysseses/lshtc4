@@ -19,6 +19,8 @@ ctypedef pair[int,double] idpair
 ctypedef vector[vector[int]] vectvect
 ctypedef unordered_map[int, vector[double]] vectmap
 ctypedef unordered_map[int, vector[double]].iterator vectmapitr
+ctypedef unordered_map[int, unordered_set[int]] isetdict
+ctypedef unordered_map[int, unordered_set[int]].iterator isetdictitr
 
 cdef void transform_tfidf(mapvect& corpus, iidict& bin_word_counter):
     ''' Transform corpus into modified tf-idf representation.
@@ -117,7 +119,8 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
     cdef vector[idpair] doc_scores
     cdef vectmap cat_scores_dict
     cdef int t_X_size = <int>t_X.size()
-    cdef int i, doc_size, d_i_size, j, label
+    cdef int i, doc_size, j, label
+    cdef int d_i_size = <int> d_i.size()
     cdef int overlap_count = 0
     cdef double threshold = 0.3
     cdef int smaller_size
@@ -139,7 +142,6 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
         labels = t_Y[i]
         # Calculate numerator efficiently
         doc_size = <int> doc.size()
-        d_i_size = <int> d_i.size()
         top = 0
         if doc_size <= d_i_size:
             smaller_size = doc_size
@@ -161,7 +163,7 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
                 if got != doc.end():
                     overlap_count += 1
                     top += kv.second * deref(got).second
-        # Calculate denominator efficiently (memoization)
+        # Calculate denominator efficiently
         # Set a magic-number threshold to skip if top is small
         if overlap_count > <int>(threshold * smaller_size):
             bottom = norm(d_i) * norm(doc)
@@ -197,6 +199,113 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
             children_set = children_index[parent]
             got2 = pscores.find(label)
             if got2 == pscores.end():
+                pscores[label] = vector[double]()
+            pscores[label].push_back(<double>children_set.size())
+    return pair[vectmap, vectmap](scores, pscores)
+
+cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
+        isdict& children_index, isetdict& idx):
+    cdef unordered_set[int] doc_nums
+    cdef iddictitr it = d_i.begin()
+    cdef int word
+    cdef isetdictitr got
+    cdef unordered_set[int] dns
+    cdef unordered_set[int].iterator it2
+    cdef mapvect candidate_docs
+    cdef unordered_map[int, double] doc
+    cdef int doc_num
+    cdef vector[int] labels
+    cdef int d_i_size = d_i_size.size()
+    cdef int doc_size
+    cdef pair[int, double] kv
+    cdef iddictitr got2
+    cdef double bottom, score, top
+    cdef int label
+    cdef vector[pair[int, double]] doc_scores
+    cdef vectmap cat_scores_dict
+    cdef vectmapitr got3
+    cdef vector[pair[int, double]].iterator it3
+    cdef int i, j
+    cdef vectmap scores, pscores
+    cdef unordered_set[int] parents_set
+    cdef unordered_set[int].iterator it4
+    cdef int parent
+    cdef unordered_set[int] children_set
+    # Find all candidate doc numbers
+    while it != d_i.end():
+        word = deref(it).first
+        got = idx.find(word)
+        inc(it)
+        if got != idx.end():
+            dns = deref(got).second
+            it2 = dns.begin()
+            while it2 != dns.end():
+                doc_nums.insert(deref(it2))
+                inc(it2)
+    # Access only the candidate docs indexed by doc_nums
+    it2 = doc_nums.begin()
+    while it2 != doc_nums.end():
+        doc_num = deref(it2)
+        doc = t_X[doc_num]
+        inc(it2)
+        labels = t_Y[doc_num]
+        # Calculate numerator efficiently
+        doc_size = <int> doc.size()
+        top = 0
+        if doc_size <= d_i_size:
+            smaller_size = doc_size
+            it = doc.begin()
+            while it != doc.end():
+                kv = deref(it)
+                inc(it)
+                got2 = d_i.find(kv.first)
+                if got2 != d_i.end():
+                    top += kv.second * deref(got2).second
+        else:
+            smaller_size = d_i_size
+            it = d_i.begin()
+            while it != d_i.end():
+                kv = deref(it)
+                inc(it)
+                got2 = doc.find(kv.first)
+                if got2 != doc.end():
+                    top += kv.second * deref(got2).second
+        # Calculate denominator
+        if top > 0:
+            bottom = norm(d_i) * norm(doc)
+            score = top / bottom
+        else:
+            score = 0
+        # Push into cat_scores_dict & doc_scores
+        for j in xrange(<int>labels.size()):
+            label = labels[j]
+            doc_scores.push_back(idpair(label,score))
+            got3 = cat_scores_dict.find(label)
+            if got3 == cat_scores_dict.end():
+                cat_scores_dict[label] = vector[double]()
+            cat_scores_dict[label].push_back(score)
+    # Return the k-NN (aka top-k similar examples)
+    partial_sort(doc_scores.begin(), doc_scores.begin()+k, doc_scores.end(),
+        comp_func)
+    # optimized/transformed scores & pscores
+    it3 = doc_scores.begin()
+    for i in xrange(k):
+        kv = deref(it3)
+        label = kv.first
+        score = kv.second
+        inc(it3)
+        got3 = scores.find(label)
+        if got3 == scores.end():
+            scores[label] = vector[double]()
+        scores[label].push_back(score)
+        parents_set = parents_index[label]
+        it4 = parents_set.begin()
+        while it4 != parents_set.end():
+            parent = deref(it4)
+            inc(it4)
+            children_set = children_index[parent]
+            got3 = pscores.find(label)
+            if got3 == pscores.end():
                 pscores[label] = vector[double]()
             pscores[label].push_back(<double>children_set.size())
     return pair[vectmap, vectmap](scores, pscores)
