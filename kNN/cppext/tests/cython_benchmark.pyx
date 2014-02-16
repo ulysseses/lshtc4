@@ -36,32 +36,44 @@ def stage1(fh="../data/train.csv", nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw
 	word_counter.prune(no_below=nbw, max_n=mnw)
 	pruning.prune_corpora(X, Y, label_counter, word_counter)
 	##Save state
-	with open("../working/label_counter.dat", 'wb') as picklefile:
-		cPickle.dump(label_counter, picklefile, -1)
 	with open("../working/word_counter.dat", 'wb') as picklefile:
 		cPickle.dump(word_counter, picklefile, -1)
 	del word_counter
-	# Prune corpora	
-	bin_word_counter = pruning.WordCounter(X, binary=True)
-	bin_word_counter.prune(no_above=naw, max_n=mnw)
-	pruning.prune_corpora(X, Y, label_counter, bin_word_counter)
-	iidx = preproc.inverse_index(X)
-	##Save state
-	with open("../working/bin_word_counter.dat", 'wb') as picklefile:
-		cPickle.dump(bin_word_counter, picklefile, -1)
-	del bin_word_counter
 	with open("../working/X.dat", 'wb') as picklefile:
 		cPickle.dump(X, picklefile, -1)
 	del X
 	with open("../working/Y.dat", 'wb') as picklefile:
 		cPickle.dump(Y, picklefile, -1)
 	del Y
+
+@benchmark.print_time
+def stage2(nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw=None):
+	# Prune 2nd stage
+	with open("../working/X.dat", 'rb') as picklefile:
+		X = cPickle.load(picklefile)
+	with open("../working/Y.dat", 'rb') as picklefile:
+		Y = cPickle.load(picklefile)
+	label_counter = pruning.LabelCounter(Y)
+	bin_word_counter = pruning.WordCounter(X, binary=True)
+	bin_word_counter.prune(no_above=naw, max_n=mnw)
+	pruning.prune_corpora(X, Y, label_counter, bin_word_counter)
+	del label_counter
+	with open("../working/Y.dat", 'wb') as picklefile:
+		cPickle.dump(Y, picklefile, -1)
+	del Y
+	with open("../working/bin_word_counter.dat", 'wb') as picklefile:
+		cPickle.dump(bin_word_counter, picklefile, -1)
+	del bin_word_counter
+	iidx = preproc.inverse_index(X)
 	with open("../working/iidx.dat", 'wb') as picklefile:
 		cPickle.dump(iidx, picklefile, -1)
+	del iidx
+	with open("../working/X.dat", 'wb') as picklefile:
+		cPickle.dump(X, picklefile, -1)
 
 
 @benchmark.print_time
-def stage2():
+def stage3():
 	with open("../working/X.dat", 'rb') as picklefile:
 		X = cPickle.load(picklefile)
 
@@ -74,7 +86,7 @@ def stage2():
 		cPickle.dump(X, picklefile, -1)
 
 @benchmark.print_time
-def stage3(hierarchy_handle="../raw_data/hierarchy.txt"):
+def stage4(hierarchy_handle="../raw_data/hierarchy.txt"):
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
 
@@ -88,7 +100,7 @@ def stage3(hierarchy_handle="../raw_data/hierarchy.txt"):
 		cPickle.dump(children_index, picklefile, -1)
 
 @benchmark.print_time
-def stage4():
+def stage5():
 	''' At the moment, for this stage, you'll have to directly modify which 
 	cv function you'll want to use to split X/Y into their respective 
 	validation/training sub-sets. In the future, the user will be able to 
@@ -112,8 +124,8 @@ def stage4():
 		cPickle.dump(t_Y, picklefile, -1)
 
 @benchmark.print_time
-def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
-		double w3=0.8, double w4=0.2, double alpha=0.9):
+def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
+		double w3=0.8, double w4=0.2, double alpha=0.76):
 	##rebuild label_counter manually to avoid weird cPickle bug
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
@@ -154,7 +166,9 @@ def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
 	cdef unordered_map[int,int] c_label_counter = \
 		convert.cythonize_counter(label_counter)
 	del label_counter
-
+	if n_iterations == -1:
+		n_iterations = c_vX.size()
+		print "n_iterations:", n_iterations
 	# Dump containers to see if they're constructed correctly
 	print "---------------------------------------------------------------------"
 	print "value of first word in first doc in c_vX:", deref(deref(c_vX.begin()).begin()).second
@@ -166,7 +180,7 @@ def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
 	print "---------------------------------------------------------------------"
 
 	@benchmark.print_time
-	def stage5():
+	def stage6():
 		# Obtain k-NN scores & pscores, predict, and calculate F1!
 		# cdef int n_iterations = 20
 		# cdef int k = 70
@@ -191,9 +205,7 @@ def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
 			inc(it2)
 			# scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, c_parents_index,
 			# 	c_children_index)
-			# scores_pair = similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index,
-				# c_children_index, c_iidx)
-			similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index, 
+			scores_pair = similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index,
 				c_children_index, c_iidx)
 		# 	scores = scores_pair.first
 		# 	pscores = scores_pair.second
@@ -209,4 +221,4 @@ def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
 		# MaF = cat_pns.calculate_MaF()
 		# print "MaF:", MaF
 
-	stage5()
+	stage6()

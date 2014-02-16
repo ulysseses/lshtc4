@@ -26,4 +26,5 @@ if __name__ == '__main__':
 		if stage == 2: cb.stage2()
 		if stage == 3: cb.stage3()
 		if stage == 4: cb.stage4()
-		if stage == 5: cb.loaded_main()
+		if stage == 5: cb.stage5()
+		if stage == 6: cb.loaded_main()

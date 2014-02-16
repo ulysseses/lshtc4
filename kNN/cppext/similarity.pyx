@@ -167,7 +167,7 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
             pscores[label].push_back(<double>children_set.size())
     return pair[vectmap, vectmap](scores, pscores)
 
-cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
+cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
         isdict& children_index, isetdict& iidx):
     # Find all candidate doc numbers
     cdef iddictitr it
@@ -281,7 +281,7 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
             if got3 == pscores.end():
                 pscores[label] = vector[double]()
             pscores[label].push_back(children_set.size())
-    # return pair[vectmap, vectmap](scores, pscores)
+    return pair[vectmap, vectmap](scores, pscores)
 
 ctypedef vector[double].iterator dvectitr
 cdef extern from "<algorithm>" namespace "std":

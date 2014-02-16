@@ -9,6 +9,7 @@ do
 	if [ $i -eq $2 ]
 	then
 		python $1 $i | tee "$1.log"
+	else
+		python $1 $i | tee -a "$1.log"
 	fi
-	python $1 $i | tee -a "$1.log"
 done
