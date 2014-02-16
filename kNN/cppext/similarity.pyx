@@ -14,6 +14,7 @@ ctypedef unordered_map[int, unordered_set[int]] isdict
 ctypedef unordered_map[int, double] iddict
 ctypedef unordered_map[int, double].iterator iddictitr
 ctypedef unordered_set[int] iset
+ctypedef unordered_set[int].iterator isetitr
 ctypedef vector[unordered_map[int,double]] mapvect
 ctypedef pair[int,double] idpair
 ctypedef vector[vector[int]] vectvect
@@ -168,33 +169,14 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
 
 cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
         isdict& children_index, isetdict& iidx):
-    cdef unordered_set[int] doc_nums
-    cdef iddictitr it = d_i.begin()
+    # Find all candidate doc numbers
+    cdef iddictitr it
     cdef int word
     cdef isetdictitr got
-    cdef unordered_set[int] dns
-    cdef unordered_set[int].iterator it2
-    cdef mapvect candidate_docs
-    cdef unordered_map[int, double] doc
-    cdef int doc_num
-    cdef vector[int] labels
-    cdef int d_i_size = d_i.size()
-    cdef int doc_size
-    cdef pair[int, double] kv
-    cdef iddictitr got2
-    cdef double bottom, score, top
-    cdef int label
-    cdef vector[pair[int, double]] doc_scores
-    cdef vectmap cat_scores_dict
-    cdef vectmapitr got3
-    cdef vector[pair[int, double]].iterator it3
-    cdef int i, j
-    cdef vectmap scores, pscores
-    cdef unordered_set[int] parents_set
-    cdef unordered_set[int].iterator it4
-    cdef int parent
-    cdef unordered_set[int] children_set
-    # Find all candidate doc numbers
+    cdef iset dns
+    cdef isetitr it2
+    cdef iset doc_nums
+    it = d_i.begin()
     while it != d_i.end():
         word = deref(it).first
         got = iidx.find(word)
@@ -202,10 +184,26 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
         if got != iidx.end():
             dns = deref(got).second
             it2 = dns.begin()
-            while it2 != dns.end():
+            while it2 != dns.begin():
                 doc_nums.insert(deref(it2))
                 inc(it2)
-    # Access only the candidate docs indexed by doc_nums
+    # Access only the candidate docs index by doc_nums
+    cdef int doc_num
+    cdef iddict doc
+    cdef vector[int] labels
+    cdef int d_i_size
+    cdef int doc_size
+    cdef double top
+    cdef idpair kv
+    cdef iddictitr got2
+    cdef bottom, score
+    cdef int j
+    cdef int label
+    cdef vector[pair[int,double]] doc_scores
+    cdef vectmap cat_scores_dict
+    cdef vectmapitr got3
+
+    d_i_size = d_i.size()
     it2 = doc_nums.begin()
     while it2 != doc_nums.end():
         doc_num = deref(it2)
@@ -213,10 +211,9 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
         inc(it2)
         labels = t_Y[doc_num]
         # Calculate numerator efficiently
-        doc_size = <int> doc.size()
+        doc_size = doc.size()
         top = 0
         if doc_size <= d_i_size:
-            smaller_size = doc_size
             it = doc.begin()
             while it != doc.end():
                 kv = deref(it)
@@ -225,7 +222,6 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
                 if got2 != d_i.end():
                     top += kv.second * deref(got2).second
         else:
-            smaller_size = d_i_size
             it = d_i.begin()
             while it != d_i.end():
                 kv = deref(it)
@@ -240,19 +236,33 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
         else:
             score = 0
         # Push into cat_scores_dict & doc_scores
-        for j in xrange(<int>labels.size()):
+        for j in xrange(labels.size()):
             label = labels[j]
-            doc_scores.push_back(idpair(label,score))
+            doc_scores.push_back(idpair(label, score))
             got3 = cat_scores_dict.find(label)
             if got3 == cat_scores_dict.end():
                 cat_scores_dict[label] = vector[double]()
             cat_scores_dict[label].push_back(score)
     # Return the k-NN (aka top-k similar examples)
-    partial_sort(doc_scores.begin(), doc_scores.begin()+k, doc_scores.end(),
-        comp_func)
+    cdef int kk
+    if k < doc_scores.size():
+        kk = k
+        partial_sort(doc_scores.begin(), doc_scores.begin()+k, doc_scores.end(),
+            comp_func)
+    else:
+        kk = doc_scores.size()
     # optimized/transformed scores & pscores
+    cdef pairvectitr it3
+    cdef int i
+    cdef vectmap scores
+    cdef iset parents_set
+    cdef isetitr it4
+    cdef int parent
+    cdef iset children_set
+    cdef vectmap pscores
+
     it3 = doc_scores.begin()
-    for i in xrange(k):
+    for i in xrange(kk):
         kv = deref(it3)
         label = kv.first
         score = kv.second
@@ -270,7 +280,7 @@ cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& paren
             got3 = pscores.find(label)
             if got3 == pscores.end():
                 pscores[label] = vector[double]()
-            pscores[label].push_back(<double>children_set.size())
+            pscores[label].push_back(children_set.size())
     # return pair[vectmap, vectmap](scores, pscores)
 
 ctypedef vector[double].iterator dvectitr
