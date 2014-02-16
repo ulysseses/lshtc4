@@ -40,17 +40,25 @@ def stage1(fh="../data/train.csv", nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw
 		cPickle.dump(label_counter, picklefile, -1)
 	with open("../working/word_counter.dat", 'wb') as picklefile:
 		cPickle.dump(word_counter, picklefile, -1)
+	del word_counter
 	# Prune corpora	
 	bin_word_counter = pruning.WordCounter(X, binary=True)
 	bin_word_counter.prune(no_above=naw, max_n=mnw)
 	pruning.prune_corpora(X, Y, label_counter, bin_word_counter)
+	iidx = preproc.inverse_index(X)
 	##Save state
 	with open("../working/bin_word_counter.dat", 'wb') as picklefile:
 		cPickle.dump(bin_word_counter, picklefile, -1)
+	del bin_word_counter
 	with open("../working/X.dat", 'wb') as picklefile:
 		cPickle.dump(X, picklefile, -1)
+	del X
 	with open("../working/Y.dat", 'wb') as picklefile:
 		cPickle.dump(Y, picklefile, -1)
+	del Y
+	with open("../working/iidx.dat", 'wb') as picklefile:
+		cPickle.dump(iidx, picklefile, -1)
+
 
 @benchmark.print_time
 def stage2():
@@ -104,13 +112,15 @@ def stage4():
 		cPickle.dump(t_Y, picklefile, -1)
 
 @benchmark.print_time
-def loaded_main(int n_iterations=20, int k=70, double w1=3.4, double w2=0.6,
+def loaded_main(int n_iterations=5, int k=10, double w1=3.4, double w2=0.6,
 		double w3=0.8, double w4=0.2, double alpha=0.9):
 	##rebuild label_counter manually to avoid weird cPickle bug
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
 	label_counter = pruning.LabelCounter(Y)
 	del Y
+	with open("../working/iidx.dat", 'rb') as picklefile:
+		iidx = cPickle.load(picklefile)
 	with open("../working/parents_index.dat", 'rb') as picklefile:
 		parents_index = cPickle.load(picklefile)
 	with open("../working/children_index.dat", 'rb') as picklefile:
@@ -132,6 +142,9 @@ def loaded_main(int n_iterations=20, int k=70, double w1=3.4, double w2=0.6,
 	del tX
 	cdef vector[vector[int]] c_tY = convert.cythonize_Y(tY)
 	del tY
+	cdef unordered_map[int, unordered_set[int]] c_iidx = \
+		convert.cythonize_iidx(iidx)
+	del iidx
 	cdef unordered_map[int, unordered_set[int]] c_parents_index = \
 		convert.cythonize_index(parents_index)
 	del parents_index
@@ -141,6 +154,16 @@ def loaded_main(int n_iterations=20, int k=70, double w1=3.4, double w2=0.6,
 	cdef unordered_map[int,int] c_label_counter = \
 		convert.cythonize_counter(label_counter)
 	del label_counter
+
+	# Dump containers to see if they're constructed correctly
+	print "---------------------------------------------------------------------"
+	print "value of first word in first doc in c_vX:", deref(deref(c_vX.begin()).begin()).second
+	print "first label in the first example (c_vY):", deref(deref(c_vY.begin()).begin())
+	print "first parent of the first child (c_parents_index):", deref(deref(c_parents_index.begin()).second.begin())
+	print "first child of the first parent (c_children_index):", deref(deref(c_children_index.begin()).second.begin())
+	print  "count of the first label in c_label_counter:", deref(c_label_counter.begin()).second
+	print "num of the first doc that contains the first word in c_iidx:", deref(deref(c_iidx.begin()).second.begin())
+	print "---------------------------------------------------------------------"
 
 	@benchmark.print_time
 	def stage5():
@@ -166,20 +189,24 @@ def loaded_main(int n_iterations=20, int k=70, double w1=3.4, double w2=0.6,
 			labels_i = deref(it2)
 			inc(it)
 			inc(it2)
-			scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, c_parents_index,
-				c_children_index)
-			scores = scores_pair.first
-			pscores = scores_pair.second
-			ranks = similarity.optimized_ranks(scores, pscores, c_label_counter,
-				w1, w2, w3, w4)
-			predicted_labels = similarity.predict(ranks, alpha)
-			py_pred_labels = [predicted_labels[<int>x]
-				for x in xrange(predicted_labels.size())]
-			py_labels_i = [labels_i[<int>x]
-				for x in xrange(labels_i.size())]
-			cat_pns.fill_pns(py_pred_labels, py_labels_i)
-		cat_pns.calculate_cat_pr()
-		MaF = cat_pns.calculate_MaF()
-		print "MaF:", MaF
+			# scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, c_parents_index,
+			# 	c_children_index)
+			# scores_pair = similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index,
+				# c_children_index, c_iidx)
+			similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index, 
+				c_children_index, c_iidx)
+		# 	scores = scores_pair.first
+		# 	pscores = scores_pair.second
+		# 	ranks = similarity.optimized_ranks(scores, pscores, c_label_counter,
+		# 		w1, w2, w3, w4)
+		# 	predicted_labels = similarity.predict(ranks, alpha)
+		# 	py_pred_labels = [predicted_labels[<int>x]
+		# 		for x in xrange(predicted_labels.size())]
+		# 	py_labels_i = [labels_i[<int>x]
+		# 		for x in xrange(labels_i.size())]
+		# 	cat_pns.fill_pns(py_pred_labels, py_labels_i)
+		# cat_pns.calculate_cat_pr()
+		# MaF = cat_pns.calculate_MaF()
+		# print "MaF:", MaF
 
 	stage5()

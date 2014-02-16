@@ -79,43 +79,6 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
         most similar docs.
         Also return a container of labels, and corresponding pscores, of `d_i`.
     '''
-    # cdef int word, label, parent
-    # cdef float top, bottom, score
-    # cdef dict doc
-    # 
-    # doc_scores, cat_scores_dict = [], defaultdict(list)
-    # for doc, labels in izip(t_X, t_Y):
-    #     # Calculate numerator efficiently
-    #     if len(doc) <= len(d_i):
-    #         first, second = doc, d_i
-    #     else:
-    #         first, second = d_i, doc
-    #     top = 0
-    #     for word in first:
-    #         if word in second:
-    #             top += first[word]*second[word]
-    #     # Calculate denominator efficiently (memoization)
-    #     if top != 0:
-    #         bottom = norm(d_i.values())*norm(doc.values())
-    #         score = top / bottom
-    #     else:
-    #         score = 0
-    #     for label in labels:
-    #         doc_scores.append((label, score))
-    #         cat_scores_dict[label].append(score)
-    # # Return the k-NN (aka top-k similar examples)
-    # top_k_tups = heapq.nlargest(k, doc_scores, operator.itemgetter(1))
-    # # optimized/transformed scores & pscores
-    # scores, pscores = defaultdict(list), defaultdict(list)
-    # for label, score in top_k_tups:
-    #     #scores[label].append(np.log(1 + score))
-    #     scores[label].append(score)
-    #     # pscores[label] = [np.log(len(children_index[parent]))
-    #     #   for parent in parents_index[label]]
-    #     pscores[label] = [len(children_index[parent])
-    #         for parent in parents_index[label]]
-    # return scores, pscores
-    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     cdef vector[idpair] doc_scores
     cdef vectmap cat_scores_dict
     cdef int t_X_size = <int>t_X.size()
@@ -203,8 +166,8 @@ cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t
             pscores[label].push_back(<double>children_set.size())
     return pair[vectmap, vectmap](scores, pscores)
 
-cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
-        isdict& children_index, isetdict& idx):
+cdef void cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
+        isdict& children_index, isetdict& iidx):
     cdef unordered_set[int] doc_nums
     cdef iddictitr it = d_i.begin()
     cdef int word
@@ -215,7 +178,7 @@ cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& 
     cdef unordered_map[int, double] doc
     cdef int doc_num
     cdef vector[int] labels
-    cdef int d_i_size = d_i_size.size()
+    cdef int d_i_size = d_i.size()
     cdef int doc_size
     cdef pair[int, double] kv
     cdef iddictitr got2
@@ -234,9 +197,9 @@ cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& 
     # Find all candidate doc numbers
     while it != d_i.end():
         word = deref(it).first
-        got = idx.find(word)
+        got = iidx.find(word)
         inc(it)
-        if got != idx.end():
+        if got != iidx.end():
             dns = deref(got).second
             it2 = dns.begin()
             while it2 != dns.end():
@@ -308,7 +271,7 @@ cdef pair[vectmap, vectmap] cossim2(iddict& d_i, mapvect& t_X, int k, vectvect& 
             if got3 == pscores.end():
                 pscores[label] = vector[double]()
             pscores[label].push_back(<double>children_set.size())
-    return pair[vectmap, vectmap](scores, pscores)
+    # return pair[vectmap, vectmap](scores, pscores)
 
 ctypedef vector[double].iterator dvectitr
 cdef extern from "<algorithm>" namespace "std":

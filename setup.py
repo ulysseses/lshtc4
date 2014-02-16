@@ -36,8 +36,8 @@ def makeExtension(extName):
     return Extension(
         extName,
         [extPath],
-        include_dirs = ["."],   # adding the '.' to include_dirs is CRUCIAL!!
-                                        # also, include any .h/.hpp header files
+        include_dirs = [".", "cppext"],   # adding the '.' to include_dirs is CRUCIAL!!
+                                             # also, include any .h/.hpp header files
         language='c++',                 # should I generate .cpp or .c source?
         extra_compile_args = ["-O3"],
         #extra_link_args = [],
@@ -45,14 +45,14 @@ def makeExtension(extName):
         )
 
 # get the list of extensions
-extNames = scandir("kNN/cppext")
+extNames = scandir("kNN")
 
 # and build up the set of Extension objects
 extensions = [makeExtension(name) for name in extNames]
 
 # finally, we can pass all this to distutils
 setup(
-  name="lshtc4",
+  name="kNN",
   packages=["kNN.cppext", "kNN.cppext.tests"],
   ext_modules=extensions,
   cmdclass = {'build_ext': build_ext},
