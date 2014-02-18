@@ -29,22 +29,27 @@ def stage0(raw="../raw_data/train.csv", out="../data/train.csv", start=1, stop=2
 def stage1(fh="../data/train.csv", nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw=None):
 	# Load toyset .csv -> X & Y
 	X, Y = preproc.extract_XY(fh)
+	print "extract_XY done"
 	# Prune corpora
 	label_counter = pruning.LabelCounter(Y)
 	word_counter = pruning.WordCounter(X)
 	label_counter.prune(no_below=nbl, no_above=nal, max_n=mnl)
 	word_counter.prune(no_below=nbw, max_n=mnw)
 	pruning.prune_corpora(X, Y, label_counter, word_counter)
+	print "prune_corpora done"
 	##Save state
 	with open("../working/word_counter.dat", 'wb') as picklefile:
 		cPickle.dump(word_counter, picklefile, -1)
 	del word_counter
+	print "pickling word_counter done"
 	with open("../working/X.dat", 'wb') as picklefile:
 		cPickle.dump(X, picklefile, -1)
 	del X
+	print "pickling X done"
 	with open("../working/Y.dat", 'wb') as picklefile:
 		cPickle.dump(Y, picklefile, -1)
 	del Y
+	print "pickling Y done"
 
 @benchmark.print_time
 def stage2(nbl=3, nbw=3, nal=1.0, naw=0.4, mnl=None, mnw=None):
@@ -130,6 +135,7 @@ def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
 	with open("../working/Y.dat", 'rb') as picklefile:
 		Y = cPickle.load(picklefile)
 	label_counter = pruning.LabelCounter(Y)
+	top2labels = [label for label,count in label_counter.most_common(2)]
 	del Y
 	with open("../working/iidx.dat", 'rb') as picklefile:
 		iidx = cPickle.load(picklefile)
@@ -148,8 +154,8 @@ def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
 	# Convert Pythonic containers to Cythonic containers
 	cdef vector[unordered_map[int,double]] c_vX = convert.cythonize_X(vX)
 	del vX
-	cdef vector[vector[int]] c_vY = convert.cythonize_Y(vY)
-	del vY
+	# cdef vector[vector[int]] c_vY = convert.cythonize_Y(vY)
+	# del vY
 	cdef vector[unordered_map[int,double]] c_tX = convert.cythonize_X(tX)
 	del tX
 	cdef vector[vector[int]] c_tY = convert.cythonize_Y(tY)
@@ -172,7 +178,8 @@ def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
 	# Dump containers to see if they're constructed correctly
 	print "---------------------------------------------------------------------"
 	print "value of first word in first doc in c_vX:", deref(deref(c_vX.begin()).begin()).second
-	print "first label in the first example (c_vY):", deref(deref(c_vY.begin()).begin())
+	print "first label in the first example (vY):", vY[0][0]
+	# print "first label in the first example (c_vY):", deref(deref(c_vY.begin()).begin())
 	print "first parent of the first child (c_parents_index):", deref(deref(c_parents_index.begin()).second.begin())
 	print "first child of the first parent (c_children_index):", deref(deref(c_children_index.begin()).second.begin())
 	print  "count of the first label in c_label_counter:", deref(c_label_counter.begin()).second
@@ -191,7 +198,7 @@ def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
 		cdef unordered_map[int, double] d_i
 		cdef vector[int] labels_i
 		cdef vector[unordered_map[int,double]].iterator it = c_vX.begin()
-		cdef vector[vector[int]].iterator it2 = c_vY.begin()
+		# cdef vector[vector[int]].iterator it2 = c_vY.begin()
 		cdef int i
 		cdef pair[unordered_map[int, vector[double]], \
 			unordered_map[int, vector[double]]] scores_pair
@@ -200,25 +207,29 @@ def loaded_main(int n_iterations=-1, int k=70, double w1=3.4, double w2=0.6,
 		cdef vector[int] predicted_labels
 		for i in xrange(n_iterations):
 			d_i = deref(it)
-			labels_i = deref(it2)
+			# labels_i = deref(it2)
 			inc(it)
-			inc(it2)
+			# inc(it2)
 			# scores_pair = similarity.cossim(d_i, c_tX, k, c_tY, c_parents_index,
 			# 	c_children_index)
 			scores_pair = similarity.cossim2(d_i, c_tX, k, c_tY, c_parents_index,
 				c_children_index, c_iidx)
-		# 	scores = scores_pair.first
-		# 	pscores = scores_pair.second
-		# 	ranks = similarity.optimized_ranks(scores, pscores, c_label_counter,
-		# 		w1, w2, w3, w4)
-		# 	predicted_labels = similarity.predict(ranks, alpha)
-		# 	py_pred_labels = [predicted_labels[<int>x]
-		# 		for x in xrange(predicted_labels.size())]
+			scores = scores_pair.first
+			pscores = scores_pair.second
+			ranks = similarity.optimized_ranks(scores, pscores, c_label_counter,
+				w1, w2, w3, w4)
+			if ranks.size() != 0:
+				predicted_labels = similarity.predict(ranks, alpha)
+				py_pred_labels = [predicted_labels[<int>x]
+					for x in xrange(predicted_labels.size())]
+			else:
+				py_pred_labels = top2labels
+			py_labels_i = vY[i]
 		# 	py_labels_i = [labels_i[<int>x]
 		# 		for x in xrange(labels_i.size())]
-		# 	cat_pns.fill_pns(py_pred_labels, py_labels_i)
-		# cat_pns.calculate_cat_pr()
-		# MaF = cat_pns.calculate_MaF()
-		# print "MaF:", MaF
+			cat_pns.fill_pns(py_pred_labels, py_labels_i)
+		cat_pns.calculate_cat_pr()
+		MaF = cat_pns.calculate_MaF()
+		print "MaF:", MaF
 
 	stage6()

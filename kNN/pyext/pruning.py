@@ -65,16 +65,16 @@ class LabelCounter(Counter):
         x90 = x[cdf > 0.90][0]
         x95 = x[cdf > 0.95][0]
         
+        print "50%\t", x50
+        print "80%\t", x80
+        print "90%\t", x90
+        print "95%\t", x95
+        
         plt.axvline(x50, color='c');
         plt.axvline(x80, color='g');
         plt.axvline(x90, color='r');
         plt.axvline(x95, color='k');
         plt.show();
-        
-        print "50%\t", x50
-        print "80%\t", x80
-        print "90%\t", x90
-        print "95%\t", x95
 
 
 class WordCounter(LabelCounter):
