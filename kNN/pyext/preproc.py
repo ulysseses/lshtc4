@@ -71,7 +71,7 @@ def extract_parents(Y, infilename):
 				parents_index[child].add(parent)
 	return parents_index
 
-def inverse_index(parents_index):
+def invert_index(parents_index):
 	''' Build an inverse index of parent->children.
 		Focus our attention only on immediate parents_index of leaf nodes.
 		No grandparents_index (of leaf nodes) allowed. '''
@@ -81,7 +81,13 @@ def inverse_index(parents_index):
 			children_index[p].add(child)
 	return children_index
 
-
+def inverse_index(X):
+	''' Create a word->doc# index '''
+	iidx = defaultdict(set)
+	for i,doc in enumerate(X):
+		for word in doc:
+			iidx[word].add(i)
+	return iidx
 
 
 

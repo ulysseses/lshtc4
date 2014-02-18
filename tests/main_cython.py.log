@@ -1,0 +1,16 @@
+stage0 call duration: 0.560085058212 sec
+stage0 call duration: 1.09140396118 sec
+stage1 call duration: 56.1989848614 sec
+stage2 call duration: 116.8117311 sec
+stage3 call duration: 3.07620501518 sec
+stage4 call duration: 61.367153883 sec
+---------------------------------------------------------------------
+value of first word in first doc in c_vX: 2.59054350853
+first label in the first example (c_vY): 377656
+first parent of the first child (c_parents_index): 2378813
+first child of the first parent (c_children_index): 178156
+count of the first label in c_label_counter: 14
+num of the first doc that contains the first word in c_iidx: 85440
+---------------------------------------------------------------------
+stage5 call duration: 0.176371097565 sec
+loaded_main call duration: 26.6275851727 sec
