@@ -1,3 +1,3 @@
 ###TODO
-* Add a `setup.py` file to correctly compile all of the cython modules
-* FF-merge `cpp_extend` branch to `master`
+* Implement Out-of-core option in new branch: `out_of_core`
+* Implement an additional locality sensitive hashing (LSH) based NN-search
