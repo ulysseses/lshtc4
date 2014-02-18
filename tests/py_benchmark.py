@@ -5,7 +5,9 @@ from itertools import izip, islice
 
 import sys
 sys.path.insert(0, '..')
-from pylib import preproc, pruning, cv, evaluation, similarity, benchmark
+#from pylib import preproc, pruning, cv, evaluation, similarity, benchmark
+from kNN.pyext.incore import cv, preproc, pruning, similarity
+from kNN.pyext import benchmark, evaluation
 
 @benchmark.print_time
 def stage0():

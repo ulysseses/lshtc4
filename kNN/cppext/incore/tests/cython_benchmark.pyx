@@ -11,14 +11,17 @@ Using Python interpretor within root directory:
 '''
 
 import cPickle
-from kNN.pyext import preproc, pruning, cv, evaluation, benchmark
-from kNN.pyext import similarity as py_sim
+from kNN.pyext.incore import preproc, pruning, cv
+from kNN.pyext.incore import similarity as py_similarity
+from kNN.pyext import benchmark
+from kNN.pyext import evaluation as py_evaluation
 
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from cython.operator cimport dereference as deref, preincrement as inc
 from kNN.cppext.container cimport unordered_map, unordered_set
-from kNN.cppext cimport similarity, convert
+from kNN.cppext import evaluation
+from kNN.cppext.incore cimport similarity, convert
 
 @benchmark.print_time
 def stage0(raw="../raw_data/train.csv", out="../data/train.csv", start=1, stop=200000):
@@ -84,7 +87,7 @@ def stage3():
 
 	# Transform X to tf-idf
 	bin_word_counter = pruning.WordCounter(X, binary=True)
-	py_sim.transform_tfidf(X, bin_word_counter)
+	py_similarity.transform_tfidf(X, bin_word_counter)
 	del bin_word_counter
 	##Save state
 	with open("../working/tX.dat", 'wb') as picklefile:
