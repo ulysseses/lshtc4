@@ -1,5 +1,7 @@
 #distutils: language = c++
-ctypedef unsigned int uint
+cimport numpy as np
+ctypedef np.uint32_t uint
+ctypedef np.float32_t flt
 
 cdef extern from "<algorithm>" namespace "std":
     void partial_sort_1 "std::partial_sort"[RandomAccessIterator](RandomAccessIterator first,\
@@ -13,7 +15,7 @@ cdef struct Word:
 
 cdef struct ModdedWord:
 	uint doc, word
-	float tfidf
+	flt tfidf
 
 cdef struct Label:
 	uint doc, label

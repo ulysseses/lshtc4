@@ -21,7 +21,6 @@ class CategoryPNCounter(defaultdict):
         tps = t_labels_set & v_labels_set
         fps = v_labels_set - t_labels_set
         fns = t_labels_set - v_labels_set
-        cdef int label
         for label in tps:
             self.__getitem__(label)['tp'] += 1
         for label in fps:
@@ -31,8 +30,6 @@ class CategoryPNCounter(defaultdict):
 
     def calculate_cat_pr(self):
         ''' For each category, calculate p & r '''
-        cdef int cat, tp, fp, fn
-        cdef double p, r
         for cat, ddict in self.iteritems():
             tp = ddict.__getitem__('tp')
             fp = ddict.__getitem__('fp')

@@ -1,6 +1,7 @@
 #distutils: language = c++
 from lshtc4.container cimport unordered_map
-ctypedef unsigned int uint
+cimport numpy as np
+ctypedef np.uint32_t uint
 
 cdef class LabelCounter(object):
 	cdef unordered_map[uint, uint] cmap

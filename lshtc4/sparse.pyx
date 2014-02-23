@@ -45,23 +45,18 @@ from libcpp.vector cimport vector
 from kNN.cppext.container cimport unordered_map
 from lshtc4.utils cimport ModdedWord
 
-np.import_array()
+ctypedef np.int32_t uint
+ctypedef np.float32_t flt
 
-UINT = np.uint32
-FLT = np.float32
-
-ctypedef np.int32_t UINT_t
-ctypedef np.float32_t FLT_t
-
-cdef FLT_t sp_uv_dot(FLT_t[:]& u_data, UINT_t[:]& u_indices, FLT_t[:]& v_data,
-		UINT_t[:]& v_indices):
+cdef flt sp_uv_dot(flt[:]& u_data, uint[:]& u_indices, flt[:]& v_data,
+		uint[:]& v_indices):
 	''' assume len(u) <= len(v) '''
 	cdef:
 		size_t len_u = len(u)
 		size_t i_u = 0
 		size_t i_v = 0
-		FLT_t ansatz = 0
-		UINT_t u_col, v_col
+		flt ansatz = 0
+		uint u_col, v_col
 	while i_u < len_u:
 		u_col, v_col = u_indices[i_u], v_indices[i_v]
 		if u_indices[i_u] > v_indices[i_v]:
@@ -73,18 +68,18 @@ cdef FLT_t sp_uv_dot(FLT_t[:]& u_data, UINT_t[:]& u_indices, FLT_t[:]& v_data,
 			i_u += 1
 	return ansatz
 
-cdef FLT_t[:] sp_Mv_mult(FLT_t[:]& M_data, UINT_t[:]& M_indices,
-		UINT_t[:]& M_indptrs, FLT_t[:]& v_data, UINT_t[:]& v_indices):
+cdef flt[:] sp_Mv_mult(flt[:]& M_data, uint[:]& M_indices,
+		uint[:]& M_indptrs, flt[:]& v_data, uint[:]& v_indices):
 	# Memoryviews are curiously returned by reference
 	# Renamed M_indptr to M_indptrs b/c it makes more sense to my mind
 	cdef:
-		FLT_t[:] output_vector = np.empty(len(M_indptrs) - 1, dtype=FLT)
-		UINT_t M_indptr0 = 0
+		flt[:] output_vector = np.empty(len(M_indptrs) - 1, dtype=np.float32)
+		uint M_indptr0 = 0
 		size_t i
-		UINT_t M_indptr1
-		FLT_t[:] data
-		UINT_t[:] cols
-		FLT_t ansatz
+		uint M_indptr1
+		flt[:] data
+		uint[:] cols
+		flt ansatz
 		size_t cols_len, vi_len
 	#M_indptrs[len(M_indptrs)-1] += M_indptrs[len(M_indptrs)-2] #<-- HACK
 	for i in xrange(len(M_indptrs) - 1): #<-- HACK
@@ -103,9 +98,9 @@ cdef FLT_t[:] sp_Mv_mult(FLT_t[:]& M_data, UINT_t[:]& M_indices,
 		M_indptr0 = M_indptr1
 	return output_vector
 
-def cooTable2cscMV(object& table, set[UINT_t]& doc_nums, 
-		vector[UINT_t]& doc_start_idx, vector[UINT_t]& doc_len_idx, 
-		unordered_map[UINT_t, UINT_t]& ref):
+def cooTable2cscMV(object& table, set[uint]& doc_nums, 
+		vector[uint]& doc_start_idx, vector[uint]& doc_len_idx, 
+		unordered_map[uint, uint]& ref):
 	''' Coordinate-list (COO) table (T) -> 3 Compressed sparse
 		column (CSC) cython-memoryviews containing `data`, `indices`,
 		and `indptr`. In addition to these memoryviews, the unordered_map
@@ -114,16 +109,16 @@ def cooTable2cscMV(object& table, set[UINT_t]& doc_nums,
 
 	    Returned as a tuple (object) because memoryviews are also PyObjects!
 	'''
-	cdef UINT_t num_words = 0
+	cdef uint num_words = 0
 	cdef size_t i
 	for i in xrange(doc_nums.size()):
 		num_words += doc_len_idx[doc_nums[i]]
-	cdef FLT_t[:] M_data = np.empty(num_words, dtype=FLT)
-	cdef UINT_t[:] M_indices = np.empty(num_words, dtype=UINT)
-	cdef UINT_t[:] M_indptr = np.empty(num_words+1, dtype=UINT)
+	cdef flt[:] M_data = np.empty(num_words, dtype=np.float32)
+	cdef uint[:] M_indices = np.empty(num_words, dtype=np.uint32)
+	cdef uint[:] M_indptr = np.empty(num_words+1, dtype=np.uint32)
 	M_indptr[num_rows] = num_rows + 1 #<-- HACK
 
-	cdef UINT_t doc_num, doc_len, doc_start
+	cdef uint doc_num, doc_len, doc_start
 	cdef ModdedWord[:] sa_mv
 	cdef ModdedWord word_obj
 	cdef size_t j

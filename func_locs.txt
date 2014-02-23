@@ -33,7 +33,7 @@ sparse.pyx
 	cossim
 	optimized_ranks
 	predict
-evaluation.pyx
+evaluation.py
 	CategoryPNCounter
 
 lshtc4/
@@ -42,11 +42,12 @@ lshtc4/
     initialize_h5.py	X
     container.pxd	X
     benchmark.py	X
-    evaluation.pyx	X
+    evaluation.py	X
     preproc.pyx		X
     pruning.pyx		X
     cv.pyx		X
     sparse.pyx		X
+    sparse.pxd		X
     utils.pxd		X?
     similarity.pyx	
     similarity.pxd

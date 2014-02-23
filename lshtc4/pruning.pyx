@@ -16,7 +16,7 @@ from cython.operator cimport dereference as deref, preincrement as inc, \
 import numpy as np
 cimport numpy as np
 
-ctypedef unsigned int uint
+ctypedef np.uint32_t uint
 ctypedef (*Compare)(pair[uint,uint], pair[uint,uint])
 
 cdef inline bint comp_pair(pair[uint,uint] x, pair[uint,uint] y):

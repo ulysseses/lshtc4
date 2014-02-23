@@ -27,15 +27,15 @@ this function.
 A K-fold CV function is also provided.
 '''
 import numpy as np
-from itertools import izip, islice
+cimport numpy as np
 from collections import defaultdict
 import tables as tb
 
 from libcpp.vector cimport vector
 from cpython cimport bool
-from kNN.cppext.container cimport unordered_map, unordered_set
+from lshtc4.container cimport unordered_map, unordered_set
 
-ctypdef unsigned int uint
+ctypdef np.uint32_t uint
 
 def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, tX=None, tY=None, 
 		uint max_per_category=1):
@@ -55,11 +55,12 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 		if (not X) or (not Y) or (not vX) or (not vY) or (not tX) or (not tY):
 			raise AssertionError("if h5name is not provided, please provide" \
 				"X, Y, vX, vY, tX, and tY")
-	cdef uint indleftX, indleftY, indrightX, indrightY
+	cdef size_t indleftX, indleftY, indrightX, indrightY
 	indleftX, indleftY, indrightX, indrightY = 0, 0, 0, 0
 	cdef unordered_map[uint, uint] label_progress
 	cdef vector[uint] labels
-	cdef uint doc, i
+	cdef uint doc
+	cdef size_t i
 	cdef uint curr_doc = Y[0]['doc']
 	cdef bool flag
 	# "iterate" by `doc` in Y and X
@@ -129,11 +130,12 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 		if (not X) or (not Y) or (not vX) or (not vY) or (not tX) or (not tY):
 			raise AssertionError("if h5name is not provided, please provide" \
 				"X, Y, vX, vY, tX, and tY")
-	cdef uint indleftX, indleftY, indrightX, indrightY
+	cdef size_t indleftX, indleftY, indrightX, indrightY
 	indleftX, indleftY, indrightX, indrightY = 0, 0, 0, 0
 	cdef unordered_map[uint, uint] label_progress
 	cdef vector[uint] labels
-	cdef uint doc, label, i
+	cdef uint doc, label
+	cdef size_t i
 	cdef uint curr_doc = Y[0]['doc']
 	cdef bool flag
 	# "iterate" by `doc` in Y and X

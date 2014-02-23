@@ -13,8 +13,10 @@ from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from libc.stdio cimport fopen, fclose, getline
 from cython.operator cimport dereference as deref, preincrement as inc
+import numpy as np
+cimport numpy as np
 
-ctypedef unsigned int uint
+ctypedef np.uint32_t uint
 
 def subset(iname, oname, offset, lines):
 	i, o = open(iname, 'rb'), open(oname, 'wb')
