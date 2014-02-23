@@ -2,8 +2,6 @@
 #cython: boundscheck = False
 #cython: wraparound = False
 from __future__ import division
-from collections import Counter, defaultdict
-from itertools import izip
 
 import kNN.cppext.outofcore.initialize_h5
 from kNN.cppext.container cimport unordered_map, unordered_set
@@ -30,8 +28,8 @@ cdef class LabelCounter(object):
     cdef unordered_map[uint, uint].iterator it
     cdef size_t size, d, total_count
 
-    def __cinit__(self, object Y=None, list lst=None):
-        #self.cmap = unordered_map[int, int]()
+    def __cinit__(self, object Y=None, list& lst=None):
+        #self.cmap = unordered_map[uint, uint]()
         self.it = self.cmap.begin()
         self.size = 0
         if lst:
@@ -42,19 +40,24 @@ cdef class LabelCounter(object):
 
     def __pack(self):
         ''' helper function to pack content '''
-        cdef unordered_map[int,int].iterator it = self.blah.begin()
-        cdef pair[int,int] fs
+        cdef unordered_map[uint,uint].iterator it = self.cmap.begin()
+        cdef pair[uint,uint] fs
         lst = []
-        while it != self.blah.end():
+        while it != self.cmap.end():
             fs = deref(inc2(it))
             lst.append((fs.first, fs.second))
         return lst
 
     def __unpack(self, lst):
         ''' helper function to unpack content '''
-        cdef int f, s
+        # modified, faster version of __setitem__
+        cdef uint f, s
         for f,s in lst:
-            self.__setitem__(f, s)
+            if self.cmap.find(x) == self.cmap.end():
+                self.size += 1
+            self.cmap[x] = y
+        self.it = self.cmap.begin()
+            
 
     def __reduce__(self):
         lst = self.__pack()
@@ -82,7 +85,7 @@ cdef class LabelCounter(object):
         if self.cmap.find(x) == self.cmap.end():
             self.size += 1
             self.it = self.cmap.begin()
-        self.blah[x] = y
+        self.cmap[x] = y
 
     def __delitem__(self, uint x):
         if x in self:
@@ -331,11 +334,11 @@ def prune_docs(X0, Y0, X1, Y1, counter):
             which corpus (X or Y) to prune initially according to the type of
             `counter` given as an argument to `prune_docs`
         '''
-        cdef unsigned int indleft = 0
-        cdef unsigned int indright = 0
-        cdef unordered_set[unsigned int] pruned_doc_id_set
+        cdef uint indleft = 0
+        cdef uint indright = 0
+        cdef unordered_set[uint] pruned_doc_id_set
         for r in B0:
-            if <unsigned int>r['label'] in counter:
+            if <uint>r['label'] in counter:
                 indright += 1
             else:
                 if indleft != indright:
@@ -343,14 +346,14 @@ def prune_docs(X0, Y0, X1, Y1, counter):
                 indright += 1
                 indleft = indright
                 # Add id of docs to be deleted within A
-                pruned_doc_id_set.insert(<unsigned int>r['doc_id'])
+                pruned_doc_id_set.insert(<uint>r['doc_id'])
         # test the last row since it isn't included above
         if indleft != indright:
             B1.append(B0[indleft : indright])
         B1.flush()
         # build a dict of cardinality of words for each doc, indexed by id
-        cdef unordered_map[unsigned int, unsigned int] raw_doc_lens
-        cdef unsigned int doc_id
+        cdef unordered_map[uint, uint] raw_doc_lens
+        cdef uint doc_id
         for r in A0:
             doc_id = r['doc_id']
             if raw_doc_lens.find(doc_id) == raw_doc_lens.end():
@@ -358,7 +361,7 @@ def prune_docs(X0, Y0, X1, Y1, counter):
             raw_doc_lens[doc_id] += 1
         # with pruned_doc_id_set, prune A0 -> A1
         indleft, indright = 0, 0
-        cdef int total_size = A0.nrows
+        cdef uint total_size = A0.nrows
         while indright != total_size:
             doc_id = A0[indright]['doc_id']
             if pruned_doc_id_set.find(doc_id) == pruned_doc_id_set.end():

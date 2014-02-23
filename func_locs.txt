@@ -45,6 +45,8 @@ lshtc4/
     evaluation.py	X
     preproc.pyx		X
     pruning.pyx		X
+    wrapper.pyx		X
+    wrapper.pxd		X
     cv.pyx		X
     sparse.pyx		X
     sparse.pxd		X

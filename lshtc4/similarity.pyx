@@ -30,7 +30,7 @@ cdef object t_X # tb.table.Table
 cdef object t_Y # tb.table.Table
 cdef unordered_map[uint, unordered_set[uint]] parents_index
 cdef unordered_map[uint, unordered_set[uint]] children_index
-cdef unordered_set[uint] iidx
+cdef unordered_map[uint, unordered_set[uint]] iidx
 cdef vector[uint] doc_len_idx
 cdef vector[uint] doc_start_idx
 
@@ -47,6 +47,7 @@ cdef pair[unordered_map[uint, vector[flt]], unordered_map[uint, vector[flt]]] \
 	cossim(ModdedWord[:]& d_i, object& t_X, size_t k, object& t_Y,
 	unordered_map[uint, unordered_set[uint]]& parents_index,
 	unordered_map[uint, unordered_set[uint]]& children_index,
+	unordered_map[uint, unordered_set[uint]]& iidx,
 	vector[uint]& doc_len_idx, vector[uint]& doc_start_idx):
 	
 	pass

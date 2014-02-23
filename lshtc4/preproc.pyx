@@ -152,7 +152,6 @@ def get_doc_starts(vector[uint]& doc_len_idx, vector[uint]& doc_start_idx):
 		curr_sum += doc_len_idx[i]
 		doc_start_idx.push_back(curr_sum)
 
-
 def transform_tfidf(WordCounter& bin_word_counter, h5name='', X=None, tfidfX=None):
     ''' Transform X to its modified tfidfX form '''
     if h5name:
