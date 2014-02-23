@@ -2,6 +2,7 @@
 #cython: boundscheck=False
 #cython: wraparound=False
 from __future__ import division
+import tables as tb
 cimport cython
 from libc.math cimport log
 from libcpp.vector cimport vector
@@ -28,14 +29,6 @@ cdef void transform_tfidf(mapvect& corpus, iidict& bin_word_counter):
         t_X = transform_corpus(corpus, bin_word_counter)
 
         Use to transform both the test and train set.'''
-    # cdef int n, w
-    # cdef dict doc
-    
-    # n = len(corpus)
-    # for doc in corpus:
-    #     for w in doc:
-    #         doc[w] = log(doc[w] + 1) * log(n / bin_word_counter[w])
-    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     cdef int n, i, j
     cdef iddict doc
     cdef iddictitr it
@@ -49,6 +42,30 @@ cdef void transform_tfidf(mapvect& corpus, iidict& bin_word_counter):
             doc[kv.first] = log(kv.second + 1) * log(<double>n / \
                 <double>bin_word_counter[kv.first])
             inc(it)
+
+cdef void transform_tfidf(iidict& bin_word_counter, h5name='', X=None, tfidfX=None):
+    ''' Transform X to its modified tfidfX form '''
+    if h5name:
+        f = tb.openFile(h5name, mode='r+')
+        X, tfidfX = f.root.pruned3X, f.root.tfidfX
+    else:
+        if (not X) or (not tfidfX):
+            raise AssertionError('if h5name not provided, please provide' \
+                'X and tfidfX manually.')
+    cdef double n = X.nrows
+    cdef size_t i
+    cdef Word row
+    r = tfidfX.row
+    for row in X:
+        r['doc_id'] = row['doc_id']
+        r['word'] = row['word']
+        r['tfidf'] = log(row['count'] + 1) * log(n / \
+            bin_word_counter[row['word']])
+        r.append()
+    tfidfX.flush()
+
+        
+
 
 cdef double norm(iddict& doc):
     cdef iddictitr it = doc.begin()
@@ -70,7 +87,7 @@ cdef extern from "<algorithm>" namespace "std":
 cdef inline bint comp_func(idpair& x, idpair& y):
     ''' A comparison func. that returns 1/True or 0/False if x > y
         based on the value of the second element in the pair, respectively. '''
-    return <bint> x.second > y.second
+    return <bint> (x.second > y.second)
 
 cdef pair[vectmap, vectmap] cossim(iddict& d_i, mapvect& t_X, int k, vectvect& t_Y, isdict& parents_index,
         isdict& children_index):
@@ -312,21 +329,6 @@ cdef double csum(vector[double]& vect):
 cdef iddict optimized_ranks(vectmap& scores, vectmap& pscores, iidict& label_counter,
         double w1, double w2, double w3, double w4):
     ''' w1..w4 are weights corresponding to x1..x4 '''
-    # cdef int c
-    # cdef double x1, x2, x3, x4
-    # ranks_dict = {}
-    # for c in scores:
-    #     # x1 = np.log(max(scores[c]))
-    #     # x2 = np.log(sum(pscores[c]))
-    #     # x3 = np.log(sum(scores[c]))
-    #     # x4 = np.log(len(scores[c])/label_counter[c])
-    #     x1 = max(scores[c])
-    #     x2 = sum(pscores[c])
-    #     x3 = sum(scores[c])
-    #     x4 = len(scores[c])/label_counter[c]
-    #     ranks_dict[c] = w1*x1 + w2*x2 + w3*x3 + w4*x4
-    # return ranks_dict
-    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     cdef int c
     cdef vectmapitr it
     cdef pair[int,vector[double]] kv
@@ -351,11 +353,6 @@ cdef vector[int] predict(iddict& ranks, double alpha):
     ''' Return a list of labels if their corresponding ranks are higher
         than a threshold provided by `alpha`.
     '''
-    # cdef double max_rank, rank
-    # cdef int label
-    # max_rank = max(ranks.itervalues())
-    # return [label for label, rank in ranks.iteritems() if rank/max_rank > alpha]
-    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     cdef vector[int] ans
     cdef double max_rank = custom_max(ranks)
     cdef iddictitr it = ranks.begin()

@@ -26,7 +26,6 @@ this function.
 
 A K-fold CV function is also provided.
 '''
-
 import numpy as np
 from itertools import izip, islice
 from collections import defaultdict
@@ -36,9 +35,10 @@ from libcpp.vector cimport vector
 from cpython cimport bool
 from kNN.cppext.container cimport unordered_map, unordered_set
 
+ctypdef unsigned int uint
 
 def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, tX=None, tY=None, 
-		unsigned intmax_per_category=1):
+		uint max_per_category=1):
 	'''
 	As it is observed that the testing data was sampled evenly on
 	each category, we perform the same sampling on the training data.
@@ -55,19 +55,19 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 		if (not X) or (not Y) or (not vX) or (not vY) or (not tX) or (not tY):
 			raise AssertionError("if h5name is not provided, please provide" \
 				"X, Y, vX, vY, tX, and tY")
-	cdef unsigned int indleftX, indleftY, indrightX, indrightY
+	cdef uint indleftX, indleftY, indrightX, indrightY
 	indleftX, indleftY, indrightX, indrightY = 0, 0, 0, 0
-	cdef unordered_map[unsigned int, unsigned int] label_progress
-	cdef vector[unsigned int] labels
-	cdef unsigned int doc_id, i
-	cdef unsigned int curr_doc_id = Y[0]['doc_id']
+	cdef unordered_map[uint, uint] label_progress
+	cdef vector[uint] labels
+	cdef uint doc, i
+	cdef uint curr_doc = Y[0]['doc']
 	cdef bool flag
-	# "iterate" by `doc_id` in Y and X
+	# "iterate" by `doc` in Y and X
 	# then decide whether to append in validation or training
 	for r in Y:
-		doc_id = r['doc_id']
+		doc = r['doc']
 		label = r['label']
-		if curr_doc_id == doc_id:
+		if curr_doc == doc:
 			if label_progress.find(label) == label_progress.end():
 				label_progress[label] = 0
 			label_progress[label] += 1
@@ -76,7 +76,7 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 		else:
 			labels.clear()
 			flag = False
-			indrightX = indleftX + X_doc_len_idx[doc_id]
+			indrightX = indleftX + X_doc_len_idx[doc]
 			for i in xrange(labels.size()):
 				if label_progress[labels[i]] <= max_per_category:
 					flag = True
@@ -89,10 +89,10 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 				tX.append(X[indleftX : indrightX])
 			indrightY += 1
 			indleftY = indrightY
-			curr_doc_id = doc_id
+			curr_doc = doc
 		indleftX = indrightX
 	# test the last row since it's not included above
-	indrightX = indleftX + X_doc_len_idx[doc_id]
+	indrightX = indleftX + X_doc_len_idx[doc]
 		flag = False
 		for i in xrange(labels.size()):
 			if label_progress[labels[i]] <= max_per_category:
@@ -129,19 +129,19 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 		if (not X) or (not Y) or (not vX) or (not vY) or (not tX) or (not tY):
 			raise AssertionError("if h5name is not provided, please provide" \
 				"X, Y, vX, vY, tX, and tY")
-	cdef unsigned int indleftX, indleftY, indrightX, indrightY
+	cdef uint indleftX, indleftY, indrightX, indrightY
 	indleftX, indleftY, indrightX, indrightY = 0, 0, 0, 0
-	cdef unordered_map[unsigned int, unsigned int] label_progress
-	cdef vector[unsigned int] labels
-	cdef unsigned int doc_id, label, i
-	cdef unsigned int curr_doc_id = Y[0]['doc_id']
+	cdef unordered_map[uint, uint] label_progress
+	cdef vector[uint] labels
+	cdef uint doc, label, i
+	cdef uint curr_doc = Y[0]['doc']
 	cdef bool flag
-	# "iterate" by `doc_id` in Y and X
+	# "iterate" by `doc` in Y and X
 	# then decide whether to append in validation or training
 	for r in Y:
-		doc_id = r['doc_id']
+		doc = r['doc']
 		label = r['label']
-		if curr_doc_id == doc_id:
+		if curr_doc == doc:
 			if label_progress.find(label) == label_progress.end():
 				label_progress[label] = 0
 			label_progress[label] += 1
@@ -150,7 +150,7 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 		else:
 			labels.clear()
 			flag = False
-			indrightX = indleftX + X_doc_len_idx[doc_id]
+			indrightX = indleftX + X_doc_len_idx[doc]
 			for i in xrange(labels.size()):
 				label = labels[i]
 				if label_progress[label] <= prop*label_counter[label]:
@@ -164,10 +164,10 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 				tX.append(X[indleftX : indrightX])
 			indrightY += 1
 			indleftY = indrightY
-			curr_doc_id = doc_id
+			curr_doc = doc
 		indleftX = indrightX
 	# test the last row since it's not included above
-	indrightX = indleftX + X_doc_len_idx[doc_id]
+	indrightX = indleftX + X_doc_len_idx[doc]
 		flag = False
 		for i in xrange(labels.size()):
 			label = labels[i]
@@ -185,7 +185,7 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 		f.close()
 
 
-def kfold_CV(X_doc_len_idx, Y_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=None,
+def kfold_CV(X_doc_len_idx, Y_doc_len_idx, h5name='', X=None, Y=None, vX=None,
 		vY=None, tX=None, tY=None, K=10, subset_choice=0):
 	''' K-Fold CV option. Works just like even_sample_CV and prop_sample_CV.
 		K = number of splits (the size of the validation split is 1/K size
@@ -204,8 +204,8 @@ def kfold_CV(X_doc_len_idx, Y_doc_len_idx, label_counter, h5name='', X=None, Y=N
 				"X, Y, vX, vY, tX, and tY")
 	# X_doc_len_idx MUST be a vector
 	# otherwise change the following implementation
-	cdef unsigned int start, stop
-	cdef unsigned int subset_size = X_doc_len_idx.size() // K
+	cdef uint start, stop
+	cdef uint subset_size = X_doc_len_idx.size() // K
 	if 0 <= subset_choice < K - 1:
 		start = subset_choice * subset_size
 		stop = start + subset_size
@@ -216,8 +216,8 @@ def kfold_CV(X_doc_len_idx, Y_doc_len_idx, label_counter, h5name='', X=None, Y=N
 		raise AssertionError("subset_choice = %d, but 0 <= subset_choice < K" % \
 			subset_choice " is not true")
 
-	cdef unsigned int i
-	cdef unsigned int indleftX, indleftY, indrightX, indrightY
+	cdef uint i
+	cdef uint indleftX, indleftY, indrightX, indrightY
 	indleftX, indleftY, indrightX, indrightY = 0, 0, 0, 0
 	# left of start -> training
 	for i in xrange(start):

@@ -1,0 +1,49 @@
+initialize_h5.py
+	XExample
+	ModdedXExample
+	YExample
+	initialize_h5
+preproc.pyx
+	subset
+	extract_XY
+	extract_parents
+	parents2children
+	inverse_index
+	doc_len_idx
+	doc_start_idx
+	transform_tfidf
+pruning.pyx
+	LabelCounter
+	WordCounter
+	prune_docs
+cv.pyx
+	even_sample_CV
+	prop_sample_CV
+	kfold_CV
+convert.pyx
+	cythonize_index
+	cythonize_counter
+	cythonize_iidx
+similarity.pyx
+	cossim
+	optimized_ranks
+	predict
+sparse.pyx
+	sp_uv_dot
+	sp_Mv_mult
+evaluation.pyx
+	CategoryPNCounter
+
+lshtc4/
+    __init__.py		X
+    initialize_h5.py	X
+    container.pxd	X
+    benchmark.py	X
+    evaluation.pyx	X
+    preproc.pyx		X
+    pruning.pyx		X
+    cv.pyx		X
+    sparse.pyx		X
+    sparse.pxd		
+    similarity.pyx	
+    similarity.pxd

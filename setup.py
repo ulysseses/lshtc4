@@ -2,6 +2,7 @@
 import sys, os
 from distutils.core import setup
 from distutils.extension import Extension
+import numpy
 
 # we'd better have Cython installed, or it's a no-go
 try:
@@ -36,7 +37,7 @@ def makeExtension(extName):
     return Extension(
         extName,
         [extPath],
-        include_dirs = [".", "cppext"],   # adding the '.' to include_dirs is CRUCIAL!!
+        include_dirs = ["."],   # adding the '.' to include_dirs is CRUCIAL!!
                                              # also, include any .h/.hpp header files
         language='c++',                 # should I generate .cpp or .c source?
         extra_compile_args = ["-O3"],
@@ -55,5 +56,6 @@ setup(
   name="kNN",
   packages=["kNN.cppext", "kNN.cppext.tests"],
   ext_modules=extensions,
+  include_dirs = [numpy.get_include()],
   cmdclass = {'build_ext': build_ext},
 )
