@@ -1,3 +1,5 @@
+benchmark.py
+	print_time
 initialize_h5.py
 	XExample
 	ModdedXExample
@@ -36,6 +38,7 @@ evaluation.pyx
 
 lshtc4/
     __init__.py		X
+    benchmark.py	X
     initialize_h5.py	X
     container.pxd	X
     benchmark.py	X
