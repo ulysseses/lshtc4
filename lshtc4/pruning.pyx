@@ -9,8 +9,7 @@ import kNN.cppext.outofcore.initialize_h5
 from kNN.cppext.container cimport unordered_map, unordered_set
 from libcpp.utility cimport pair
 from libcpp.vector cimport vector
-from lshtc4.partial_sort cimport partial_sort
-from lshtc4.utils cimport comp_pair, Word, Label
+from lshtc4.utils cimport partial_sort_1, partial_sort_2
 from cython.operator cimport dereference as deref, preincrement as inc, \
     postincrement as inc2
 
@@ -18,13 +17,18 @@ import numpy as np
 cimport numpy as np
 
 ctypedef unsigned int uint
+ctypedef (*Compare)(pair[uint,uint], pair[uint,uint])
+
+cdef inline bint comp_pair(pair[uint,uint] x, pair[uint,uint] y):
+    ''' A comparison func. that returns 1/True or 0/False if x > y
+        based on the value of the second element in the pair, respectively. '''
+    return <bint> (x.second > y.second)
 
 
 cdef class LabelCounter(object):
     cdef unordered_map[uint, uint] cmap
     cdef unordered_map[uint, uint].iterator it
-    cdef size_t size
-    cdef size_t d, total_count
+    cdef size_t size, d, total_count
 
     def __cinit__(self, object Y=None, list lst=None):
         #self.cmap = unordered_map[int, int]()
@@ -219,7 +223,7 @@ cdef class LabelCounter(object):
         cdef size_t i = 0
         while temp != self.cmap.end():
             dfs[inc2(i)] = deref(temp)
-        partial_sort(dfs.begin(), dfs.begin()+much, dfs.end(),
+        partial_sort_2(dfs.begin(), dfs.begin()+much, dfs.end(),
             comp_pair)
         return dfs
 
@@ -230,7 +234,7 @@ cdef class LabelCounter(object):
         cdef size_t i = 0
         while temp != self.cmap.end():
             input[inc2(i)] = deref(temp)
-        partial_sort(input.begin(), input.begin()+much, input.end(),
+        partial_sort_2(input.begin(), input.begin()+much, input.end(),
             comp_pair)
 
     def analyze_top_dfs(self, int most_common=100):

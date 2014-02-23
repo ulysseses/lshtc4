@@ -5,7 +5,10 @@ import tables as tb
 from collections import defaultdict
 from itertools import islice
 
-from kNN.cppext.container cimport unordered_map, unordered_set
+from lshtc4.container cimport unordered_map, unordered_set
+from lshtc4.utils cimport Word
+from lshtc4.pruning cimport WordCounter
+from lshtc4.pruning import WordCounter
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from libc.stdio cimport fopen, fclose, getline
@@ -76,7 +79,7 @@ def extract_XY(infilename, h5name="../working/train.h5", mode='r+'):
 	f.close()
 
 
-cdef void extract_parents(object& Y, char* infilename,
+def extract_parents(object& Y, char* infilename,
 		unordered_map[uint, unordered_set[uint]]& parents_index):
 	''' Extract the immediate parents_index of each leaf node.
 		Builds an index of child->parents_index
@@ -114,7 +117,7 @@ def parents2children(unordered_map[uint, unordered_set[uint]]& parents_index,
 			children_index[deref(it2)].insert(kv.first)
 
 
-cdef void inverse_index(object& X, unordered_map[uint, unordered_set[uint]]& iidx):
+def inverse_index(object& X, unordered_map[uint, unordered_set[uint]]& iidx):
 	cdef uint word
 	for r in X:
 		word = r['word']
@@ -122,7 +125,7 @@ cdef void inverse_index(object& X, unordered_map[uint, unordered_set[uint]]& iid
 			iidx[word] = unordered_set[int]()
 		iidx[word].insert(<uint>r['doc'])
 
-cdef void get_doc_lens(object& corpus, vector[uint]& doc_len_idx):
+def get_doc_lens(object& corpus, vector[uint]& doc_len_idx):
 	""" Create a doc_len_idx from corpus (X or Y) """
 	cdef uint doc
 	cdef uint curr_doc = 0
@@ -138,7 +141,7 @@ cdef void get_doc_lens(object& corpus, vector[uint]& doc_len_idx):
 			doc_len = 0
 			curr_doc = doc
 
-cdef void get_doc_starts(vector[uint]& doc_len_idx, vector[uint]& doc_start_idx):
+def get_doc_starts(vector[uint]& doc_len_idx, vector[uint]& doc_start_idx):
 	''' Convert doc_len_idx to doc_start_idx '''
 	cdef uint i
 	cdef uint curr_sum = 0
@@ -148,3 +151,22 @@ cdef void get_doc_starts(vector[uint]& doc_len_idx, vector[uint]& doc_start_idx)
 		doc_start_idx.push_back(curr_sum)
 
 
+def transform_tfidf(WordCounter& bin_word_counter, h5name='', X=None, tfidfX=None):
+    ''' Transform X to its modified tfidfX form '''
+    if h5name:
+        f = tb.openFile(h5name, mode='r+')
+        X, tfidfX = f.root.pruned3X, f.root.tfidfX
+    else:
+        if (not X) or (not tfidfX):
+            raise AssertionError('if h5name not provided, please provide' \
+                'X and tfidfX manually.')
+    cdef double n = X.nrows
+    cdef size_t i
+    r = tfidfX.row
+    for row in X:
+        r['doc_id'] = <uint>row['doc_id']
+        r['word'] = <uint>row['word']
+        r['tfidf'] = log(row['count'] + 1) * log(n / \
+            bin_word_counter[<size_t>row['word']])
+        r.append()
+    tfidfX.flush()

@@ -43,29 +43,6 @@ cdef void transform_tfidf(mapvect& corpus, iidict& bin_word_counter):
                 <double>bin_word_counter[kv.first])
             inc(it)
 
-cdef void transform_tfidf(iidict& bin_word_counter, h5name='', X=None, tfidfX=None):
-    ''' Transform X to its modified tfidfX form '''
-    if h5name:
-        f = tb.openFile(h5name, mode='r+')
-        X, tfidfX = f.root.pruned3X, f.root.tfidfX
-    else:
-        if (not X) or (not tfidfX):
-            raise AssertionError('if h5name not provided, please provide' \
-                'X and tfidfX manually.')
-    cdef double n = X.nrows
-    cdef size_t i
-    cdef Word row
-    r = tfidfX.row
-    for row in X:
-        r['doc_id'] = row['doc_id']
-        r['word'] = row['word']
-        r['tfidf'] = log(row['count'] + 1) * log(n / \
-            bin_word_counter[row['word']])
-        r.append()
-    tfidfX.flush()
-
-        
-
 
 cdef double norm(iddict& doc):
     cdef iddictitr it = doc.begin()

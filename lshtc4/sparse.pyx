@@ -43,6 +43,7 @@ cimport cython
 from libcpp.set cimport set
 from libcpp.vector cimport vector
 from kNN.cppext.container cimport unordered_map
+from lshtc4.utils cimport ModdedWord
 
 np.import_array()
 
@@ -102,11 +103,7 @@ cdef FLT_t[:] sp_Mv_mult(FLT_t[:]& M_data, UINT_t[:]& M_indices,
 		M_indptr0 = M_indptr1
 	return output_vector
 
-cdef struct Word: #<-- from sparse cimport Word ...?
-	UINT_t doc_id, word
-	FLT_t tfidf
-
-cdef object cooTable2cscMV(object& table, set[UINT_t]& doc_nums, 
+def cooTable2cscMV(object& table, set[UINT_t]& doc_nums, 
 		vector[UINT_t]& doc_start_idx, vector[UINT_t]& doc_len_idx, 
 		unordered_map[UINT_t, UINT_t]& ref):
 	''' Coordinate-list (COO) table (T) -> 3 Compressed sparse
@@ -127,8 +124,8 @@ cdef object cooTable2cscMV(object& table, set[UINT_t]& doc_nums,
 	M_indptr[num_rows] = num_rows + 1 #<-- HACK
 
 	cdef UINT_t doc_num, doc_len, doc_start
-	cdef Word[:] sa_mv
-	cdef Word word_obj
+	cdef ModdedWord[:] sa_mv
+	cdef ModdedWord word_obj
 	cdef size_t j
 	cdef i_M_data, i_M_indices, i_M_indptr, first_ind
 	i_M_data, i_M_indices, i_M_indptr, first_ind = 0, 0, 0, 0

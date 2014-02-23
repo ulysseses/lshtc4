@@ -16,21 +16,21 @@ pruning.pyx
 	LabelCounter
 	WordCounter
 	prune_docs
+pruning.pxd
+	LabelCounter
+	WordCounter
 cv.pyx
 	even_sample_CV
 	prop_sample_CV
 	kfold_CV
-convert.pyx
-	cythonize_index
-	cythonize_counter
-	cythonize_iidx
-similarity.pyx
+sparse.pyx
+	sp_uv_dot <-- unexposed
+	sp_Mv_mult <-- unexposed
+	cooTable2cscMV
+#similarity.pyx
 	cossim
 	optimized_ranks
 	predict
-sparse.pyx
-	sp_uv_dot
-	sp_Mv_mult
 evaluation.pyx
 	CategoryPNCounter
 
@@ -44,6 +44,6 @@ lshtc4/
     pruning.pyx		X
     cv.pyx		X
     sparse.pyx		X
-    sparse.pxd		
+    utils.pxd		X?
     similarity.pyx	
     similarity.pxd

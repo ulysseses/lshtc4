@@ -5,7 +5,7 @@ class XExample(tb.IsDescription):
 	word = tb.UInt32Col()
 	count = tb.UInt32Col()
 
-class moddedXExample(tb.IsDescription):
+class ModdedXExample(tb.IsDescription):
 	doc = tb.UInt32Col()
 	word = tb.UInt32Col()
 	tfidf = tb.Float32Col()
