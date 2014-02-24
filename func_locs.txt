@@ -14,6 +14,7 @@ preproc.pyx
 	doc_len_idx
 	doc_start_idx
 	transform_tfidf
+	doc2label
 pruning.pyx
 	LabelCounter
 	WordCounter
@@ -25,12 +26,19 @@ cv.pyx
 	even_sample_CV
 	prop_sample_CV
 	kfold_CV
+utils.pxd
+	partial_sort_1
+	partial_sort_2
+	Word
+	ModdedWord
+	Label	
 sparse.pyx
 	sp_uv_dot
 	sp_Mv_mult
 	cooTable2cscMV
-#similarity.pyx
+similarity.pyx
 	cossim
+	get_candidate_doc_nums
 	optimized_ranks
 	predict
 evaluation.py
@@ -49,7 +57,7 @@ lshtc4/
     wrapper.pxd		X
     cv.pyx		X
     sparse.pyx		X
-    sparse.pxd		
+    sparse.pxd		X
     utils.pxd		X
     similarity.pyx	X
-    similarity.pxd	
+    similarity.pxd	X	

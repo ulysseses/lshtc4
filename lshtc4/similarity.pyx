@@ -9,7 +9,7 @@ from libcpp.set cimport set
 from libcpp.utility cimport pair
 from cython.operator cimport dereference as deref, preincrement as inc, \
 	postincrement as inc2
-from lshtc4.utils cimport ModdedWord, partial_sort_2
+from lshtc4.utils cimport ModdedWord, partial_sort_2, max_element_1
 import numpy as np
 cimport numpy as np
 from lshtc4 cimport sparse
@@ -24,27 +24,6 @@ cdef inline bint comp_pair(pair[uint, flt] x, pair[uint, flt] y):
     based on the value of the second element in the pair, respectively. '''
     return <bint> (x.second > y.second)
 
-
-'''
-PARAMS:
-cdef ModdedWord[:] d_i
-cdef object t_X # tb.table.Table
-cdef object t_Y # tb.table.Table
-cdef unordered_map[uint, unordered_set[uint]] parents_index
-cdef unordered_map[uint, unordered_set[uint]] children_index
-cdef unordered_map[uint, unordered_set[uint]] iidx
-cdef vector[uint] doc_len_idx
-cdef vector[uint] doc_start_idx
-
-LOCAL:
-cdef set[uint] doc_nums
-cdef unordered_map[uint, uint] ref # row_ind -> doc_id "reference"
-cdef flt[:] M_data
-cdef uint[:] M_indices
-cdef uint[:] M_indptr
-cdef flt[:] output_vector # partial_sort with NumPy v1.8; use `ref` to see
-	corresponding doc_id to score
-'''
 cdef void get_cossim(ModdedWord[:]& d_i, object& t_X, size_t k,
 	unordered_map[uint, unordered_set[uint]]& parents_index,
 	unordered_map[uint, unordered_set[uint]]& children_index,
@@ -120,10 +99,52 @@ cdef void get_candidate_doc_nums(ModdedWord[:]& d_i,
 			doc_set = &(deref(got).second)
 			for doc in deref(doc_set):
 				doc_nums.insert(doc)
-	
 
+cdef flt csum(vector[flt]& vect):
+	''' custom sum func for vector[flt]'s '''
+	cdef flt ansatz = 0
+	cdef size_t i
+	for i in xrange(vect.size()):
+		ansatz += vect[i]
+	return ansatz
 
+cdef void optimized_ranks(unordered_map[uint, vector[flt]]& scores,
+	unordered_map[uint, vector[flt]]& pscores, unordered_map[uint, uint]& label_counter,
+	flt w1, flt w2, flt w3, flt w4, unordered_map[uint, flt]& ranks):
+	''' w1..w4 are weights corresponding to x1..x4 '''
+	cdef pair[uint, vector[flt]] kv
+	cdef vector[flt] inner_scores, inner_pscores
+	cdef uint c
+	cdef flt x1, x2, x3, x4
+	for kv in scores:
+		c = kv.first
+		inner_scores = kv.second
+		inner_pscores = pscores[c]
+		x1 = deref(max_element_1(inner_scores.begin(), inner_scores.end()))
+		x2 = csum(inner_pscores)
+		x3 = csum(inner_scores)
+		x4 = (<flt>inner_scores.size())/(<flt>label_counter[c])
+		ranks[c] = w1*x1 + w2*x2 + w3*x3 + w4*x4
 
+cdef flt custom_max(unordered_map[uint,flt]& lut):
+	''' personal func taht returns the max value inside an
+		unordered_map[uint, flt] '''
+	cdef pair[uint,flt] kv
+	cdef flt ansatz = deref(lut.begin()).second
+	for kv in lut:
+		if kv.second > ansatz:
+			ansatz = kv.second
+	return ansatz
+
+cdef void predict(unordered_map[uint, flt]& ranks, flt alpha, vector[uint]& predictions):
+    ''' Return a vector of labels if their corresponding ranks are higher
+        than a threshold provided by `alpha`.
+    '''
+    cdef flt max_rank = custom_max(ranks)
+    cdef pair[uint,flt] kv
+    for kv in ranks:
+    	if kv.second / max_rank > alpha:
+    		ans.push_back(kv.first)
 
 
 
