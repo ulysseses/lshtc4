@@ -15,11 +15,12 @@ from libcpp.vector cimport vector
 from cython.operator cimport dereference as deref, preincrement as inc, \
     postincrement as inc2
 from lshtc4.container cimport unordered_map, unordered_set
-cimport numpy as np
+# cimport numpy as np
 
 import cPickle as pickle
 
-ctypedef np.uint32_t uint
+# ctypedef np.uint32_t uint
+from lshtc4.utils cimport uint, flt
 
 cdef void pickleIndex(unordered_map[uint, unordered_set[uint]]& input, char* outname):
 	''' pickle Index in a way that it can be pickled '''

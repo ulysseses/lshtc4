@@ -1,11 +1,11 @@
 #distutils: language = c++
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
-import numpy as np
-cimport numpy as np
+# cimport numpy as np
 
-ctypedef np.int32_t uint
-ctypedef np.float32_t flt
+# ctypedef np.int32_t uint
+# ctypedef np.float32_t flt
+from lshtc4.utils cimport uint, flt
 
 cdef flt sp_uv_dot(flt[:]& u_data, uint[:]& u_indices, flt[:]& v_data,
 	uint[:]& v_indices)

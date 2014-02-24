@@ -3,8 +3,7 @@
 #cython: wraparound = False
 from __future__ import division
 
-import kNN.cppext.outofcore.initialize_h5
-from kNN.cppext.container cimport unordered_map, unordered_set
+from lshtc4.container cimport unordered_map, unordered_set
 from libcpp.utility cimport pair
 from libcpp.vector cimport vector
 from lshtc4.utils cimport partial_sort_1, partial_sort_2
@@ -14,8 +13,9 @@ from cython.operator cimport dereference as deref, preincrement as inc, \
 import numpy as np
 cimport numpy as np
 
-ctypedef np.uint32_t uint
-ctypedef (*Compare)(pair[uint,uint], pair[uint,uint])
+# ctypedef np.uint32_t uint
+from lshtc4.utils cimport uint, flt, Label
+ctypedef bint (*Compare)(pair[uint,uint], pair[uint,uint])
 
 cdef inline bint comp_pair(pair[uint,uint] x, pair[uint,uint] y):
     ''' A comparison func. that returns 1/True or 0/False if x > y
@@ -24,17 +24,17 @@ cdef inline bint comp_pair(pair[uint,uint] x, pair[uint,uint] y):
 
 
 cdef class LabelCounter(object):
-    cdef unordered_map[uint, uint] cmap
-    cdef unordered_map[uint, uint].iterator it
-    cdef size_t size, d, total_count
+    # cdef unordered_map[uint, uint] cmap
+    # cdef unordered_map[uint, uint].iterator it
+    # cdef size_t size, d, total_count
 
-    def __cinit__(self, object Y=None, list& lst=None):
+    def __cinit__(self, object Y=None, object lst=None):
         #self.cmap = unordered_map[uint, uint]()
         self.it = self.cmap.begin()
         self.size = 0
         if lst:
             self.__unpack(lst)
-            break
+            return
         if Y:
             self.__build_counter(Y)
 
@@ -53,9 +53,8 @@ cdef class LabelCounter(object):
         # modified, faster version of __setitem__
         cdef uint f, s
         for f,s in lst:
-            if self.cmap.find(x) == self.cmap.end():
-                self.size += 1
-            self.cmap[x] = y
+            self.size += 1
+            self.cmap[f] = s
         self.it = self.cmap.begin()
             
 
@@ -70,10 +69,11 @@ cdef class LabelCounter(object):
         if len(self) != len(other): return 0
         cdef unordered_map[uint,uint].iterator u = self.cmap.begin()
         cdef unordered_map[uint,uint].iterator v = other.cmap.begin()
-        cdef pair[uint,uint] ufs, vfs
+        cdef pair[uint,uint] ufs
+        cdef pair[uint,uint] vfs
         cdef uint uf, us, vf, vs
         while u != self.cmap.end():
-            ufs = deref(inc2(u); vfs = deref(inc2(v))
+            ufs = deref(inc2(u)); vfs = deref(inc2(v))
             if (ufs.first != vfs.first) or (ufs.second != vfs.second):
                 return 0
         return 1
@@ -155,7 +155,7 @@ cdef class LabelCounter(object):
             inc(temp)
 
     def items(self):
-        cdef np.uint32_t[:] items = np.empty((self.size, 2), dtype=np.uint32)
+        cdef np.uint32_t[:,:] items = np.empty((self.size, 2), dtype=np.uint32)
         cdef unordered_map[uint, uint].iterator temp = self.cmap.begin()
         cdef pair[uint,uint] kv
         cdef size_t i = 0
@@ -166,7 +166,7 @@ cdef class LabelCounter(object):
             i += 1
         return items
 
-    def items2(self, np.uint32_t[:]& input):
+    def items2(self, np.uint32_t[:,:]& input):
         cdef unordered_map[uint, uint].iterator temp = self.cmap.begin()
         cdef pair[uint,uint] kv
         cdef size_t i = 0
@@ -184,18 +184,18 @@ cdef class LabelCounter(object):
 
     def __build_counter(self, Y):
         self.total_count = Y.nrows
-        cdef Label l
+        cdef uint l
         for r in Y:
-            l = r[:]
+            l = <uint>r['label']
             self.cmap[l] = 0
         for r in Y:
-            l = r[:]
+            l = <uint>r['label']
             self.cmap[l] += 1
         self.d = self.cmap.size()
         self.it = self.cmap.begin()
 
     def prune(self, uint no_below=1, double no_above=1.0, ssize_t max_n=-1):
-        cdef size_t ABOVE_COUNT = no_above * self.total_count
+        cdef size_t ABOVE_COUNT = <size_t>(no_above * self.total_count)
         cdef unordered_map[uint, uint].iterator temp = self.cmap.begin()
         cdef uint label, count
         while temp != self.cmap.end():
@@ -214,38 +214,51 @@ cdef class LabelCounter(object):
                 i += 1
                 inc(temp)
             while temp != self.cmap.end():
-                self.total_size -= deref(temp).second
+                self.size -= deref(temp).second
                 temp = self.cmap.erase(temp)
         self.it = self.cmap.begin()
 
-    def most_common(ssize_t much=-1):
-        if much == -1: much = self.cmap.size()
-        cdef vector[pair[uint, uint]] dfs
-        dfs.reserve(self.cmap.size())
+    def most_common(self, size_t much):
+        if much == 0: much = self.cmap.size()
+        cdef vector[pair[uint,uint]] dfs
+        dfs.resize(self.cmap.size())
         cdef unordered_map[uint,uint].iterator temp = self.cmap.begin()
         cdef size_t i = 0
         while temp != self.cmap.end():
-            dfs[inc2(i)] = deref(temp)
+            dfs[inc2(i)] = deref(inc2(temp))
         partial_sort_2(dfs.begin(), dfs.begin()+much, dfs.end(),
             comp_pair)
-        return dfs
+        py_dfs = []
+        for i in xrange(<int>much):
+            py_dfs.append((dfs[i].first, dfs[i].second))
+        return py_dfs
 
-    def most_common2(vector[pair[uint,uint]]& input, ssize_t much=-1):
-        if much == -1: much = self.cmap.size()
-        input.reserve(self.cmap.size())
+    def most_common2(self, vector[pair[uint,uint]]& input, size_t much):
+        if much == 0: much = self.cmap.size()
+        input.resize(self.cmap.size())
         cdef unordered_map[uint,uint].iterator temp = self.cmap.begin()
         cdef size_t i = 0
         while temp != self.cmap.end():
-            input[inc2(i)] = deref(temp)
+            input[inc2(i)] = deref(inc2(temp))
         partial_sort_2(input.begin(), input.begin()+much, input.end(),
             comp_pair)
 
-    def analyze_top_dfs(self, int most_common=100):
+    def analyze_top_dfs(self, size_t most_common):
         cdef vector[pair[uint,uint]] dfs
-        self.most_common2(dfs, much=most_common)
-        for word, count in dfs:
+        #self.most_common2(dfs, most_common)
+        dfs.resize(self.cmap.size())
+        cdef unordered_map[uint,uint].iterator temp = self.cmap.begin()
+        cdef size_t i = 0
+        while temp != self.cmap.end():
+            dfs[inc2(i)] = deref(inc2(temp))
+        partial_sort_2(dfs.begin(), dfs.begin()+most_common, dfs.end(),
+            comp_pair)
+        cdef uint word, count
+        for i in xrange(most_common):
+            word = dfs[i].first
+            count = dfs[i].second
             print "hash: %7d\tcount: %d\tfreq: %.3f" % \
-                (word, count, count/self.total_count)
+                (word, count, (count/self.total_count))
 
     def display_hist(self):
         from matplotlib import pyplot as plt
@@ -256,8 +269,18 @@ cdef class LabelCounter(object):
                 b[i] = b[i-1] + a[i]
 
         cdef vector[pair[uint,uint]] dfs
-        self.most_common2(dfs)
-        y = [tup[1] for tup in dfs]
+        #self.most_common2(dfs, 0)
+        dfs.resize(self.cmap.size())
+        cdef unordered_map[uint,uint].iterator temp = self.cmap.begin()
+        cdef size_t i = 0
+        while temp != self.cmap.end():
+            dfs[inc2(i)] = deref(inc2(temp))
+        partial_sort_2(dfs.begin(), dfs.end(), dfs.end(),
+            comp_pair)
+
+        y = []
+        for i in xrange(dfs.size()):
+            y.append(dfs[i].second)
         x = np.arange(len(y))
 
         plt.figure(figsize=(8,5));
@@ -284,10 +307,10 @@ cdef class LabelCounter(object):
         plt.axvline(x80, color='g');
         plt.axvline(x90, color='r');
         plt.axvline(x95, color='k');
-        plt.show();        
+        plt.show();
 
 
-class WordCounter(LabelCounter):
+cdef class WordCounter(LabelCounter):
     def __cinit__(self, X=None, binary=False):
         self.binary = binary
         if X:

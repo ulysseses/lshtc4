@@ -39,8 +39,10 @@ cdef extern from "<tr1/unordered_map>" namespace "std::tr1":
         #const_iterator end()
         pair[iterator, iterator] equal_range(T&) nogil
         #pair[const_iterator, const_iterator] equal_range(key_type&)
-        void erase(iterator) nogil
-        void erase(iterator, iterator) nogil
+        iterator erase(iterator) nogil
+        iterator erase(iterator, iterator) nogil
+        #void erase(iterator) nogil
+        #void erase(iterator, iterator) nogil
         size_t erase(T&) nogil
         iterator find(T&) nogil
         #const_iterator find(key_type&)
@@ -98,8 +100,10 @@ cdef extern from "<tr1/unordered_set>" namespace "std::tr1":
         #const_iterator end()
         pair[iterator, iterator] equal_range(T&) nogil
         #pair[const_iterator, const_iterator] equal_range(T&)
-        void erase(iterator) nogil
-        void erase(iterator, iterator) nogil
+        iterator erase(iterator) nogil
+        iterator erase(iterator, iterator) nogil
+        #void erase(iterator) nogil
+        #void erase(iterator, iterator) nogil
         size_t erase(T&) nogil
         iterator find(T&) nogil
         #const_iterator find(T&)

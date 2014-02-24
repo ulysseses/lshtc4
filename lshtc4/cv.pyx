@@ -32,13 +32,13 @@ from collections import defaultdict
 import tables as tb
 
 from libcpp.vector cimport vector
-from cpython cimport bool
 from lshtc4.container cimport unordered_map, unordered_set
 
-ctypdef np.uint32_t uint
+# ctypedef np.uint32_t uint
+from lshtc4.utils cimport uint, flt
 
-def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, tX=None, tY=None, 
-		uint max_per_category=1):
+def even_sample_CV(vector[uint]& X_doc_len_idx, h5name='', X=None, Y=None, vX=None,
+	vY=None, tX=None, tY=None, uint max_per_category=1):
 	'''
 	As it is observed that the testing data was sampled evenly on
 	each category, we perform the same sampling on the training data.
@@ -62,7 +62,6 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 	cdef uint doc
 	cdef size_t i
 	cdef uint curr_doc = Y[0]['doc']
-	cdef bool flag
 	# "iterate" by `doc` in Y and X
 	# then decide whether to append in validation or training
 	for r in Y:
@@ -94,24 +93,24 @@ def even_sample_CV(X_doc_len_idx, h5name='', X=None, Y=None, vX=None, vY=None, t
 		indleftX = indrightX
 	# test the last row since it's not included above
 	indrightX = indleftX + X_doc_len_idx[doc]
-		flag = False
-		for i in xrange(labels.size()):
-			if label_progress[labels[i]] <= max_per_category:
-				flag = True
-				break
-		if flag:
-			vY.append(Y[indleftY : indrightY])
-			vX.append(X[indleftX : indrightX])
-		else:
-			tY.append(Y[indleftY : indrightY])
-			tX.append(X[indleftX : indrightX])
+	flag = False
+	for i in xrange(labels.size()):
+		if label_progress[labels[i]] <= max_per_category:
+			flag = True
+			break
+	if flag:
+		vY.append(Y[indleftY : indrightY])
+		vX.append(X[indleftX : indrightX])
+	else:
+		tY.append(Y[indleftY : indrightY])
+		tX.append(X[indleftX : indrightX])
 	vX.flush(); vY.flush(); tX.flush(); tY.flush()
 	if h5name:
 		f.close()
 
 
-def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=None, vY=None, tX=None, tY=None, 
-		double prop=0.1):
+def prop_sample_CV(vector[uint]& X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=None,
+	vY=None, tX=None, tY=None, double prop=0.1):
 	'''
 	Sub-sample according to the proportion of cat populations.
 	Use this function if the training population is inbalanced.
@@ -137,7 +136,6 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 	cdef uint doc, label
 	cdef size_t i
 	cdef uint curr_doc = Y[0]['doc']
-	cdef bool flag
 	# "iterate" by `doc` in Y and X
 	# then decide whether to append in validation or training
 	for r in Y:
@@ -170,25 +168,25 @@ def prop_sample_CV(X_doc_len_idx, label_counter, h5name='', X=None, Y=None, vX=N
 		indleftX = indrightX
 	# test the last row since it's not included above
 	indrightX = indleftX + X_doc_len_idx[doc]
-		flag = False
-		for i in xrange(labels.size()):
-			label = labels[i]
-			if label_progress[label] <= prop*label_counter[label]:
-				flag = True
-				break
-		if flag:
-			vY.append(Y[indleftY : indrightY])
-			vX.append(X[indleftX : indrightX])
-		else:
-			tY.append(Y[indleftY : indrightY])
-			tX.append(X[indleftX : indrightX])
+	flag = False
+	for i in xrange(labels.size()):
+		label = labels[i]
+		if label_progress[label] <= prop*label_counter[label]:
+			flag = True
+			break
+	if flag:
+		vY.append(Y[indleftY : indrightY])
+		vX.append(X[indleftX : indrightX])
+	else:
+		tY.append(Y[indleftY : indrightY])
+		tX.append(X[indleftX : indrightX])
 	vX.flush(); vY.flush(); tX.flush(); tY.flush()
 	if h5name:
 		f.close()
 
 
-def kfold_CV(X_doc_len_idx, Y_doc_len_idx, h5name='', X=None, Y=None, vX=None,
-		vY=None, tX=None, tY=None, K=10, subset_choice=0):
+def kfold_CV(vector[uint]& X_doc_len_idx, Y_doc_len_idx, h5name='', X=None, Y=None,
+	vX=None, vY=None, tX=None, tY=None, K=10, subset_choice=0):
 	''' K-Fold CV option. Works just like even_sample_CV and prop_sample_CV.
 		K = number of splits (the size of the validation split is 1/K size
 				of training set)
@@ -211,12 +209,12 @@ def kfold_CV(X_doc_len_idx, Y_doc_len_idx, h5name='', X=None, Y=None, vX=None,
 	if 0 <= subset_choice < K - 1:
 		start = subset_choice * subset_size
 		stop = start + subset_size
-	elif: subset_choice == K - 1:
+	elif subset_choice == K - 1:
 		start = subset_choice * subset_size
 		stop = X_doc_len_idx.size()
 	else:
-		raise AssertionError("subset_choice = %d, but 0 <= subset_choice < K" % \
-			subset_choice " is not true")
+		raise AssertionError(("subset_choice = %d, but 0 <= subset_choice < K" % \
+			subset_choice) + " is not true.")
 
 	cdef uint i
 	cdef uint indleftX, indleftY, indrightX, indrightY

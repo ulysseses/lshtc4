@@ -2,10 +2,11 @@
 from lshtc4.container cimport unodered_set, unordered_map
 from lshtc4.utils cimport ModdedWord
 from libcpp.vector cimport vector
-cimport numpy as np
+# cimport numpy as np
 
-ctypedef np.uint32_t uint
-ctypedef np.float32_t flt
+# ctypedef np.uint32_t uint
+# ctypedef np.float32_t flt
+from lshtc4.utils cimport uint, flt
 
 cdef void get_cossim(ModdedWord[:]& d_i, object& t_X, size_t k,
 	unordered_map[uint, unordered_set[uint]]& parents_index,

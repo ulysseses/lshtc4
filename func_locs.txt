@@ -8,12 +8,19 @@ initialize_h5.py
 preproc.pyx
 	subset
 	extract_XY
+	transform_tfidf
 	extract_parents
 	parents2children
 	inverse_index
 	doc_len_idx
 	doc_start_idx
-	transform_tfidf
+	doc2label
+preproc.pxd
+	extract_parents
+	parents2children
+	inverse_index
+	get_doc_lens
+	get_doc_starts
 	doc2label
 pruning.pyx
 	LabelCounter

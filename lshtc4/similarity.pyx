@@ -15,11 +15,12 @@ cimport numpy as np
 from lshtc4 cimport sparse
 from lshtc4 import sparse
 
-ctypedef np.uint32_t uint
-ctypedef np.float32_t flt
+# ctypedef np.uint32_t uint
+# ctypedef np.float32_t flt
+from lshtc4.utils cimport uint, flt
 
 ctypedef bint (*Compare)(pair[uint, flt], pair[uint, flt])
-cdef inline bint comp_pair(pair[uint, flt] x, pair[uint, flt] y):
+cdef inline bint comp_pair2(pair[uint, flt] x, pair[uint, flt] y):
     ''' A comparison func. that returns 1/True or 0/False if x > y
     based on the value of the second element in the pair, respectively. '''
     return <bint> (x.second > y.second)
@@ -63,7 +64,7 @@ cdef void get_cossim(ModdedWord[:]& d_i, object& t_X, size_t k,
 	if k < doc_scores.size():
 		kk = k
 		partial_sort_2(doc_scores.begin(), doc_scores.begin()+kk, doc_scores.end(),
-			comp_pair)
+			comp_pair2)
 	else:
 		kk = doc_scores.size() # don't bother sorting
 	# optimized/transformed scores & pscores

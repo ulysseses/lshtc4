@@ -46,15 +46,15 @@ def makeExtension(extName):
         )
 
 # get the list of extensions
-extNames = scandir("kNN")
+extNames = scandir("lshtc4/")
 
 # and build up the set of Extension objects
 extensions = [makeExtension(name) for name in extNames]
 
 # finally, we can pass all this to distutils
 setup(
-  name="kNN",
-  packages=["kNN.cppext", "kNN.cppext.tests"],
+  name="lshtc4",
+  packages=["lshtc4", ],
   ext_modules=extensions,
   include_dirs = [numpy.get_include()],
   cmdclass = {'build_ext': build_ext},
