@@ -26,8 +26,8 @@ cv.pyx
 	prop_sample_CV
 	kfold_CV
 sparse.pyx
-	sp_uv_dot <-- unexposed
-	sp_Mv_mult <-- unexposed
+	sp_uv_dot
+	sp_Mv_mult
 	cooTable2cscMV
 #similarity.pyx
 	cossim
@@ -49,7 +49,7 @@ lshtc4/
     wrapper.pxd		X
     cv.pyx		X
     sparse.pyx		X
-    sparse.pxd		X
-    utils.pxd		X?
-    similarity.pyx	
-    similarity.pxd
+    sparse.pxd		
+    utils.pxd		X
+    similarity.pyx	X
+    similarity.pxd	

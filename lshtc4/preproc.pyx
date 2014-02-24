@@ -171,3 +171,16 @@ def transform_tfidf(WordCounter& bin_word_counter, h5name='', X=None, tfidfX=Non
             bin_word_counter[<size_t>row['word']])
         r.append()
     tfidfX.flush()
+
+def doc2label(object& Y, unordered_map[uint, unordered_set[uint]]& label_index):
+	''' outer map is indexed by `doc`; and each inner set indexes
+		that `doc`'s corresponding labels '''
+	cdef uint curr_doc = 0
+	cdef uint doc
+	for row in Y:
+		doc = <uint>row['doc']
+		if label_index.find(doc) == label_index.end():
+			label_index[doc] = unordered_set[uint]()
+		label_index[doc].insert(<uint>row['label'])
+		
+

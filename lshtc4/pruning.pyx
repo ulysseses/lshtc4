@@ -336,7 +336,7 @@ def prune_docs(X0, Y0, X1, Y1, counter):
         '''
         cdef uint indleft = 0
         cdef uint indright = 0
-        cdef unordered_set[uint] pruned_doc_id_set
+        cdef unordered_set[uint] pruned_doc_set
         for r in B0:
             if <uint>r['label'] in counter:
                 indright += 1
@@ -346,26 +346,26 @@ def prune_docs(X0, Y0, X1, Y1, counter):
                 indright += 1
                 indleft = indright
                 # Add id of docs to be deleted within A
-                pruned_doc_id_set.insert(<uint>r['doc_id'])
+                pruned_doc_set.insert(<uint>r['doc'])
         # test the last row since it isn't included above
         if indleft != indright:
             B1.append(B0[indleft : indright])
         B1.flush()
         # build a dict of cardinality of words for each doc, indexed by id
         cdef unordered_map[uint, uint] raw_doc_lens
-        cdef uint doc_id
+        cdef uint doc
         for r in A0:
-            doc_id = r['doc_id']
-            if raw_doc_lens.find(doc_id) == raw_doc_lens.end():
-                raw_doc_lens[doc_id] = 0
-            raw_doc_lens[doc_id] += 1
-        # with pruned_doc_id_set, prune A0 -> A1
+            doc = r['doc']
+            if raw_doc_lens.find(doc) == raw_doc_lens.end():
+                raw_doc_lens[doc] = 0
+            raw_doc_lens[doc] += 1
+        # with pruned_doc_set, prune A0 -> A1
         indleft, indright = 0, 0
         cdef uint total_size = A0.nrows
         while indright != total_size:
-            doc_id = A0[indright]['doc_id']
-            if pruned_doc_id_set.find(doc_id) == pruned_doc_id_set.end():
-                indright += raw_doc_lens[doc_id]
+            doc = A0[indright]['doc']
+            if pruned_doc_set.find(doc) == pruned_doc_set.end():
+                indright += raw_doc_lens[doc]
             else:
                 if indleft != indright:
                     A1.append(A0[indleft : indright])

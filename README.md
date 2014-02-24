@@ -6,6 +6,7 @@
 	cdef vector[uint] doc_len_idx
 	cdef vector[uint] doc_start_idx
 
-* Complete `cossim` within `similarity.pyx`
+* UPDATE func_locs.txt
+* UPDATE PXDs to REFLECT PYXs!
 * Unit tests!
 * Implement an additional locality sensitive hashing (LSH) based NN-search

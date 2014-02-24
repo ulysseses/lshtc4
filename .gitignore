@@ -6,3 +6,4 @@ notebooks/.ipynb_checkpoints/
 build/
 *.so
 *.h5
+*.dat
