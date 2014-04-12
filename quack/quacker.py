@@ -1,2 +1,0 @@
-def quack():
-    print "Quack!"
