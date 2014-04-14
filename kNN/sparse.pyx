@@ -6,11 +6,12 @@ from libcpp.utility cimport pair
 from libcpp.vector cimport vector
 from libcpp.set cimport set as cset
 from types cimport *
+from preproc cimport Baggage
 
 import numpy as np
 cimport numpy as np
 
-cdef void cooBT2csrMV(object& X, cset[uint]& doc_nums, vector[uint]& ref,
+cdef void cooBT2csrMV(Baggage& X, cset[uint]& doc_nums, vector[uint]& ref,
 	flt[:]& M_data, uint[:]& M_indices, uint[:]& M_indptr, flt[:]& M_norm):
 	''' Coordinate-list (COO) BLZ table (BT) -> compressed sparse row (CSR) Cython-memoryviews (MV)
 		containing `data`, `indices`, and `indptr`. In addition to these memoryviews, the vector

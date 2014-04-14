@@ -1,6 +1,6 @@
 #distutils: language = c++
 #cython: boundscheck = False
-#cython: wraparound = False
+#cython: wraparound = True
 from __future__ import division
 
 from libcpp.utility cimport pair
@@ -18,7 +18,7 @@ import cPickle as pickle
 import blz
 
 
-cdef void extract_parents(char* infilename, object& Y, Family& parents_index):
+cdef void extract_parents(char* infilename, Y, Family& parents_index):
 	'''
 	Extract the immediate parents_index of each leaf node.
 	Builds an index of child->parents_index
@@ -32,7 +32,7 @@ cdef void extract_parents(char* infilename, object& Y, Family& parents_index):
 		for line in f:
 			# guaranteed each line has 2 tokens
 			parent, child = [int(x) for x in line.split()]
-			if child in seen_children: # if child is a seen child, then it is a leaf!
+			if seen_children.find(child) != seen_children.end(): # if child is a seen child, then it is a leaf!
 				parents_index[child].insert(parent)
 
 
@@ -54,7 +54,8 @@ cdef void parents2children(Family& parents_index, Family& children_index):
 			children_index[p].insert(kv.first)
 
 
-def extract_XY(infilename, Xname, Yname, expectedlen=2000000):
+cdef void extract_XY(infilename, Xname, Yname, expectedlen=2000000,
+	Baggage& X, Baggage& Y):
 	'''
 	Given a libsvm multi-label formatted training text file, extract the labels
 	and (hash, tf) pairs. Store the pairs into a pythonic dict, and store the
@@ -90,9 +91,9 @@ def extract_XY(infilename, Xname, Yname, expectedlen=2000000):
 		# Finally, wrap into Baggage
 		X = Baggage(Xtable)
 		Y = Baggage(Ytable)
-		return (X, Y)
 
-def create_iidx(infilename, iidx_name, expectedlen=-1):
+cdef void create_iidx(infilename, iidx_name, expectedlen=-1,
+	Baggage& iidx):
 	'''
 	Given a libsvm-format multi-label formatted training text file, create a 
 	word->doc mapping, better known as an inverted index (iidx).
@@ -103,7 +104,7 @@ def create_iidx(infilename, iidx_name, expectedlen=-1):
 	Note: This method is potentially memory-intensive.
 
 	'''
-	cdef unordered_set[size_t] word_set
+	cdef unordered_set[uint] word_set
 	with open(infilename, 'rb') as infile:
 		# if expectedlen is its default value, calculate expectedlen
 		if expectedlen == -1:
@@ -112,19 +113,19 @@ def create_iidx(infilename, iidx_name, expectedlen=-1):
 				pre_kvs = line_comma_split[-1].split()[1:]
 				for kv_str in pre_kvs:
 					k,v = kv_str.split(':')
-					word_set.insert(<size_t>int(k))
+					word_set.insert(<uint>int(k))
 			expectedlen = word_set.size()
 	# Perform a full pass over file while filling up blz btable
 	cdef:
-		unordered_map[size_t, vector[size_t]] word_map
-		size_t doc
-		unordered_map[size_t, vector[size_t]].iterator wm_it
-		pair[size_t, vector[size_t]] word_docs
-		size_t word
-		vector[size_t] docs
+		unordered_map[uint, vector[uint]] word_map
+		uint doc
+		unordered_map[uint, vector[uint]].iterator wm_it
+		pair[uint, vector[uint]] word_docs
+		uint word
+		vector[uint] docs
 	with open(infilename, 'rb') as infile:
 		word_set.clear()
-		iidx = blz.btable(np.empty(0, dtype='u4,u4'), expectedlen=expectedlen, rootdir=iidx_name)
+		iidx_table = blz.btable(np.empty(0, dtype='u4,u4'), expectedlen=expectedlen, rootdir=iidx_name)
 		# Fill up an in-memory iidx called word_map
 		for doc,line in enumerate(infile):
 			line_comma_split = line.split(',')
@@ -139,10 +140,12 @@ def create_iidx(infilename, iidx_name, expectedlen=-1):
 			word = word_docs.first
 			docs = word_docs.second
 			for doc in docs:
-				iidx.append((word, doc))
+				iidx_table.append((word, doc))
 		word_map.clear()
-		iidx.flush()
-	return iidx
+		iidx_table.flush()
+
+		# Wrap into baggage
+		iidx = Baggage(iidx_table)
 
 
 cdef class Baggage(object):
@@ -154,10 +157,8 @@ cdef class Baggage(object):
 	its C-allocated `lens` and `starts` arrays. Actually they're implemented
 	as C++ STL vectors.
 	'''
-	cdef vector[size_t] starts
-	cdef vector[size_t] lens
 
-	def __cinit__(self, table):#, dispatch):
+	def __cinit__(self, table):
 		'''
 		You can build a Baggage object by:
 		A. Pass in `kvs` (dict) & `labels` (list) one-by-one
@@ -190,22 +191,6 @@ cdef class Baggage(object):
 		else:
 			raise AssertionError("Argument `table` must be an instance of `blz.btable`!")
 
-		# if dispatch == 'X':
-		# 	self.__getitem__ = self.__getitem_X
-		# elif dispatch == 'Y':
-		# 	self.__getitem__ = self.__getitem_Y
-		# elif dispatch == 'iidx':
-		# 	self.__getitem__ = self.__getitem_iidx
-		# else:
-		# 	raise AssertionError("`dispatch` is invalid. It must be either 'X', 'Y', or 'iidx'.")
-		# if dispatch == 'X':
-		# 	self.get = self.__get_X
-		# elif dispatch == 'Y':
-		# 	self.get = self.__get_Y
-		# elif dispatch == 'iidx':
-		# 	self.get = self.__get_idx
-		# else:
-		# 	raise AssertionError("`dispatch` is invalid. It must be either 'X', 'Y', or 'iidx'.")
 
 	def fill_starts_lens(self):
 		curr_len = 1
@@ -229,7 +214,9 @@ cdef class Baggage(object):
 		>>> cdef Word[:] bag = b[14]
 
 		'''
-		return <Word[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		cdef Word[:] ans = self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		#return <Word[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		return ans
 
 	cdef Label[:] __get_Y(self, size_t x):
 		'''
@@ -238,7 +225,9 @@ cdef class Baggage(object):
 		>>> cdef Label[:] bag = b[14]
 
 		'''
-		return <Label[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		cdef Label[:] ans = self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		#return <Label[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		return ans
 
 	cdef Doc[:] __get_iidx(self, size_t x):
 		'''
@@ -248,7 +237,9 @@ cdef class Baggage(object):
 		>>> cdef Doc[:] bag = b[14]
 
 		'''
-		return <Doc[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		cdef Doc[:] ans = self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		#return <Doc[:]> self.ooc_store[self.starts[x] : self.starts[x] + self.lens[x]]
+		return ans	
 
 	def __len__(self):
 		return self.starts.size()

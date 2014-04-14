@@ -1,6 +1,6 @@
 #distutils: language = c++
-#cython: boundscheck = False
-#cython: wraparound = False
+#cython: boundscheck = True
+#cython: wraparound = True
 ''' 
 Cross Validation Module 
 
@@ -27,6 +27,7 @@ this function.
 A K-fold CV function is also provided.
 '''
 from __future__ import division
+from itertools import islice
 from container cimport unordered_map, unordered_set
 
 
@@ -44,7 +45,7 @@ def even_sample_CV(iname, oname_t, oname_v):
 	`oname_v` - validation libsvm output filename
 
 	'''
-	cdef unordered_set[LABEL] seen_labels
+	cdef unordered_set[uint] seen_labels
 	infile, outfile_t, outfile_v = open(iname, 'rb'), open(oname_t, 'wb'), open(oname_v, 'wb')
 	with infile, outfile_t, outfile_v:
 		for line in infile:								# "545, 32 8:1 18:2"
@@ -77,7 +78,7 @@ def prop_sample_CV(iname, oname_t, oname_v, label_counter, prop=0.1):
 	a new CV-split in every trial, one must manually shuffle the dataset before calling
 	this function.
 	'''
-	cdef unordered_map[LABEL, size_t] label_progress
+	cdef unordered_map[uint, size_t] label_progress
 
 	infile, outfile_t, outfile_v = open(iname, 'rb'), open(oname_t, 'wb'), open(oname_v, 'wb')
 	with infile, outfile_t, outfile_v:
@@ -124,7 +125,7 @@ def kfold_CV(iname, oname_t, oname_v, N, K=10, subset_choice=0):
 		stop = N
 	else:
 		raise AssertionError("subset_choice = %d, but 0 <= subset_choice < K" % \
-			subset_choice " is not true.")
+			subset_choice + " is not true.")
 	if start == 0:
 		subset(iname, oname_v, start, stop-start)
 		subset(iname, oname_t, stop, N)

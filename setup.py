@@ -1,10 +1,10 @@
-# build script for 'lshtc4'
+# build script for `lshtc4`
 import sys, os
 from distutils.core import setup
 from distutils.extension import Extension
 import numpy
 
-# we'd better have Cython installed, or it's a no-go
+# We'd better have Cython installed, or it's a no-go
 try:
     from Cython.Distutils import build_ext
 except:
@@ -13,16 +13,16 @@ except:
     sys.exit(1)
 
 
-# scan the 'clib' directory for extension files, converting
-# them to extension names in dotted notation
 def scandir(dir, files=[]):
+    ''' Scan the `dir` directory recursively for extension files, converting
+        them to extension names in dotted notation '''
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         if os.path.isfile(path) and path.endswith(".pyx"):
-            files.append(path.replace(os.path.sep, '.')[:-4])
+            files.append(path.replace(os.path.sep, '.')[:-4]) # :-4 removes .pyx
         elif os.path.isdir(path):
             scandir(path, files)
-    # fix issues where the first 1 or 2 chars are dots...
+    # fix minor issue when there are files whose first 1 or 2 chars are dots
     for i in xrange(len(files)):
         file = files[i]
         while file[0] == '.':
@@ -31,31 +31,31 @@ def scandir(dir, files=[]):
     return files
 
 
-# generate an Extension object from its dotted name
 def makeExtension(extName):
-    extPath = extName.replace(".", os.path.sep)+".pyx"
-    return Extension(
-        extName,
-        [extPath],
-        include_dirs = ["."],   # adding the '.' to include_dirs is CRUCIAL!!
-                                             # also, include any .h/.hpp header files
-        language='c++',                 # should I generate .cpp or .c source?
-        extra_compile_args = ["-O3"],
-        #extra_link_args = [],
-        #libraries = [],                # put any .o/.so files here
-        )
+    ''' Generate an Extension object from its dotted name '''
+    extPath = extName.replace('.', os.path.sep) + ".pyx"
+    return Extension(extName,
+                     [extPath],
+                     include_dirs       = ['.'],
+                     language           = "c++",
+                     extra_compile_args = [],
+                     extra_link_args    = [],
+                     libraries          = []
+                    )
 
-# get the list of extensions
-extNames = scandir("lshtc4/")
 
-# and build up the set of Extension objects
+# Get the list of extensions
+extNames = scandir("kNN/")
+# Build up the set of Extension objects
 extensions = [makeExtension(name) for name in extNames]
+# Finally, we can pass all this to distutils
+setup(name= "kNN",
+      packages= ["kNN"],
+      ext_modules= extensions,
+      include_dirs= [numpy.get_include()],
+      cmdclass= {"build_ext": build_ext}
+     )
 
-# finally, we can pass all this to distutils
-setup(
-  name="lshtc4",
-  packages=["lshtc4", ],
-  ext_modules=extensions,
-  include_dirs = [numpy.get_include()],
-  cmdclass = {'build_ext': build_ext},
-)
+
+
+

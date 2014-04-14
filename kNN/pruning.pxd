@@ -6,7 +6,7 @@ from types cimport *
 cdef class LabelCounter(object):
 	cdef unordered_map[uint, uint] cmap
 	cdef unordered_map[uint, uint].iterator it
-	cdef size_t size, d, total_count
+	cdef uint total_count
 
 cdef class WordCounter(LabelCounter):
 	pass

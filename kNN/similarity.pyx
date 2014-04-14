@@ -12,6 +12,7 @@ from cython.operator cimport dereference as deref, preincrement as inc, \
 	postincrement as inc2
 
 from types cimport *
+from preproc cimport Baggage
 from algorithms cimport partial_sort_2, max_element_1
 
 import numpy as np
@@ -25,8 +26,8 @@ cdef inline bint comp_pair(pair[uint,flt] x, pair[uint,flt] y):
 		based on the value of the 2nd element of the pair. '''
 	return x.second > y.second
 
-cdef void cossim(Word[:]& d_i, object& t_X, size_t k, Family& parents_index,
-	Family& children_index, object& labels_index, object& iidx,
+cdef void cossim(Word[:]& d_i, Baggage& t_X, size_t k, Family& parents_index,
+	Family& children_index, Baggage& labels_index, Baggage& iidx,
 	Score& scores, Score& pscores):
 	'''
 	Returns the child and parent category scores for the input query document
@@ -43,7 +44,7 @@ cdef void cossim(Word[:]& d_i, object& t_X, size_t k, Family& parents_index,
 		return scores, pscores
 
 	Notes:
-		`object`s are technically `Baggage`s.
+		`Baggage`s are technically `Baggage`s.
 
 	'''
 	# COO blz.btable -> CSR memview
@@ -93,7 +94,7 @@ cdef void cossim(Word[:]& d_i, object& t_X, size_t k, Family& parents_index,
 	get_pscores(parents_index, children_index, scores, pscores)
 
 
-cdef void categorize(DSPair[:]& doc_scores, object& tY,
+cdef void categorize(DSPair[:]& doc_scores, Baggage& tY,
 	Score& scores):
 	'''	Categorize each doc and its respective score '''
 	# Categorize each doc and its respective score
@@ -122,7 +123,7 @@ def get_pscores(Family& parents_index, Family& children_index,
 
 
 
-cdef void get_candidate_doc_nums(Word[:]& d_i, object& iidx, cset[size_t]& doc_nums):
+cdef void get_candidate_doc_nums(Word[:]& d_i, Baggage& iidx, cset[size_t]& doc_nums):
 	''' Find all candidate docs from the words in `d_i` with `iidx` '''
 	cdef:
 		size_t word
